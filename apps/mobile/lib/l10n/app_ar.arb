@@ -1,0 +1,48 @@
+{
+  "@@locale": "ar",
+  "appName": "كير إلدر",
+  "appTagline": "رعاية ذكية لكبار السن ومتابعة لحظية للأهل",
+  "loginTitle": "تسجيل الدخول",
+  "loginSubtitle": "أدخل رقم هاتفك لتسجيل الدخول أو إنشاء حساب جديد",
+  "phoneLabel": "رقم الهاتف المحمول",
+  "phoneHint": "01012345678",
+  "sendOtpButton": "إرسال رمز التحقق",
+  "otpTitle": "تأكيد رقم الهاتف",
+  "otpSubtitle": "تم إرسال رمز مكون من 6 أرقام إلى الرقم {phone}",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "otpLabel": "رمز التحقق",
+  "otpHint": "123456",
+  "verifyButton": "تأكيد ودخول",
+  "resendButton": "إعادة الإرسال",
+  "nameLabel": "الاسم بالكامل",
+  "nameHint": "مثال: أحمد محمد",
+  "roleLabel": "نوع الحساب",
+  "rolePatient": "مريض / كبير سن",
+  "roleCaregiver": "مرافق / ابن أو ابنة",
+  "homeTitle": "الرئيسية",
+  "welcomeUser": "أهلاً بك، {name}",
+  "@welcomeUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userRoleLabel": "الدور: {role}",
+  "@userRoleLabel": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "logoutButton": "تسجيل الخروج",
+  "errorOccurred": "حدث خطأ ما",
+  "retry": "إعادة المحاولة"
+}

@@ -1,0 +1,48 @@
+{
+  "@@locale": "en",
+  "appName": "CareElder",
+  "appTagline": "Smart Elderly Care & Real-time Family Monitoring",
+  "loginTitle": "Login",
+  "loginSubtitle": "Enter your phone number to sign in or register",
+  "phoneLabel": "Mobile Number",
+  "phoneHint": "01012345678",
+  "sendOtpButton": "Send Verification Code",
+  "otpTitle": "Verify Phone",
+  "otpSubtitle": "A 6-digit code was sent to {phone}",
+  "@otpSubtitle": {
+    "placeholders": {
+      "phone": {
+        "type": "String"
+      }
+    }
+  },
+  "otpLabel": "Verification Code",
+  "otpHint": "123456",
+  "verifyButton": "Verify & Enter",
+  "resendButton": "Resend Code",
+  "nameLabel": "Full Name",
+  "nameHint": "e.g., Ahmed Mohamed",
+  "roleLabel": "Account Type",
+  "rolePatient": "Patient / Senior",
+  "roleCaregiver": "Caregiver / Family",
+  "homeTitle": "Home",
+  "welcomeUser": "Welcome, {name}",
+  "@welcomeUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userRoleLabel": "Role: {role}",
+  "@userRoleLabel": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "logoutButton": "Log Out",
+  "errorOccurred": "An error occurred",
+  "retry": "Retry"
+}

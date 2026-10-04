@@ -1,0 +1,24 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "lib/l10n/app_localizations*.dart"
+    - "lib/l10n/app_localizations.dart"
+    - build/**
+    - android/**
+    - ios/**
+
+linter:
+  rules:
+    public_member_api_docs: false
+    lines_longer_than_80_chars: false
+    avoid_redundant_argument_values: false
+    sort_pub_dependencies: false
+    unnecessary_type_name_in_constructor: false
+    avoid_catches_without_on_clauses: false
+    only_throw_errors: false
+    unawaited_futures: false
+    omit_local_variable_types: false
+    prefer_initializing_formals: false
+    use_null_aware_elements: false
