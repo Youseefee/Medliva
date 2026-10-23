@@ -29,13 +29,24 @@ async def test_otp_flow_and_me_endpoints(client: AsyncClient):
     assert bad_resp.status_code == 400
     assert bad_resp.json()["error"]["code"] == "OTP_INVALID"
 
+    # Roles must never be assigned by a public registration request.
+    privilege_resp = await client.post(
+        "/api/v1/auth/otp/verify",
+        json={
+            "phone": "01098765432",
+            "code": dev_code,
+            "role": "admin",
+        },
+    )
+    assert privilege_resp.status_code == 422
+    assert privilege_resp.json()["error"]["code"] == "VALIDATION_ERROR"
+
     # 3. Verify with valid OTP -> should succeed and create user
     verify_resp = await client.post(
         "/api/v1/auth/otp/verify",
         json={
             "phone": "01098765432",
             "code": dev_code,
-            "role": "patient",
             "name": "عم أحمد",
         },
     )
@@ -73,8 +84,44 @@ async def test_otp_flow_and_me_endpoints(client: AsyncClient):
     assert "access_token" in new_tokens
     assert "refresh_token" in new_tokens
 
+    reused_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": refresh_token},
+    )
+    assert reused_resp.status_code == 401
+    assert reused_resp.json()["error"]["code"] == "REFRESH_REUSED"
+
+    logout_resp = await client.post(
+        "/api/v1/auth/logout",
+        json={"refresh_token": new_tokens["refresh_token"]},
+    )
+    assert logout_resp.status_code == 204
+
+    revoked_resp = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": new_tokens["refresh_token"]},
+    )
+    assert revoked_resp.status_code == 401
+    assert revoked_resp.json()["error"]["code"] == "REFRESH_REUSED"
+
 
 async def test_unauthorized_me(client: AsyncClient):
     resp = await client.get("/api/v1/me")
     assert resp.status_code == 401
     assert resp.json()["error"]["code"] == "UNAUTHORIZED"
+
+
+async def test_otp_request_rate_limit(client: AsyncClient):
+    for _ in range(5):
+        response = await client.post(
+            "/api/v1/auth/otp/request",
+            json={"phone": "01011112222"},
+        )
+        assert response.status_code == 200
+
+    limited_response = await client.post(
+        "/api/v1/auth/otp/request",
+        json={"phone": "01011112222"},
+    )
+    assert limited_response.status_code == 429
+    assert limited_response.json()["error"]["code"] == "OTP_RATE_LIMITED"

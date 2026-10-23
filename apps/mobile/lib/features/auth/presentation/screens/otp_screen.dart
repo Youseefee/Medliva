@@ -23,7 +23,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  String _selectedRole = 'patient';
   bool _isLoading = false;
 
   @override
@@ -48,7 +47,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       await ref.read(authNotifierProvider.notifier).verifyOtp(
             phone: widget.phone,
             code: _codeController.text.trim(),
-            role: _selectedRole,
             name: _nameController.text.trim().isEmpty
                 ? null
                 : _nameController.text.trim(),
@@ -127,42 +125,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     hintText: l10n.nameHint,
                     prefixIcon: const Icon(Icons.person_rounded, size: 28),
                   ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  l10n.roleLabel,
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<String>(
-                  segments: [
-                    ButtonSegment(
-                      value: 'patient',
-                      label: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          l10n.rolePatient,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      icon: const Icon(Icons.elderly_rounded),
-                    ),
-                    ButtonSegment(
-                      value: 'caregiver',
-                      label: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          l10n.roleCaregiver,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                      ),
-                      icon: const Icon(Icons.family_restroom_rounded),
-                    ),
-                  ],
-                  selected: {_selectedRole},
-                  onSelectionChanged: (newSet) {
-                    setState(() => _selectedRole = newSet.first);
-                  },
                 ),
                 const SizedBox(height: 36),
                 ElevatedButton(

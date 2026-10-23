@@ -3,11 +3,11 @@
 | المجال | الإجراء |
 |---|---|
 | النقل | HTTPS/TLS 1.3 فقط، WSS للـ WebSocket |
-| المصادقة | OTP (5 محاولات/ساعة) + JWT قصير (15 د) + Refresh مع Rotation |
-| الصلاحيات | RBAC + `permissions_mask` لكل رابط مرافق، فحص الملكية في كل endpoint |
+| المصادقة | OTP (5 محاولات/ساعة) + JWT قصير (15 د) + Refresh sessions مع Rotation وإلغاء |
+| الصلاحيات | RBAC + `permissions_mask` لكل رابط مرافق، فحص الملكية في كل endpoint؛ التسجيل العام ينشئ patient فقط |
 | التخزين | تشفير الأعمدة الحساسة (pgcrypto)، SQLCipher على الجهاز، Signed URLs للملفات |
 | روابط الطبيب | Token عشوائي 32 بايت، يُخزّن hash فقط، صلاحية 24–72 ساعة، قراءة فقط، قابل للإلغاء |
-| الحماية | Rate limiting (Redis)، CORS محدد، Input validation (Pydantic)، Audit logs |
+| الحماية | Rate limiting، CORS محدد، Input validation (Pydantic)، Audit logs |
 | الأسرار | `.env` خارج Git، GitHub Secrets، تدوير المفاتيح |
 | الخصوصية | Consent صريح، حذف الحساب والبيانات عند الطلب، عدم إرسال هوية المريض للـ LLM |
 | المرجعية | قانون حماية البيانات المصري 151/2020، مبادئ HIPAA/GDPR |

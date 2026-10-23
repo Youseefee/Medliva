@@ -46,7 +46,6 @@ class AuthRepository {
   Future<UserModel> verifyOtp({
     required String phone,
     required String code,
-    String? role,
     String? name,
   }) async {
     try {
@@ -55,7 +54,6 @@ class AuthRepository {
         data: {
           'phone': phone,
           'code': code,
-          if (role != null) 'role': role,
           if (name != null && name.isNotEmpty) 'name': name,
         },
       );
@@ -87,6 +85,18 @@ class AuthRepository {
   }
 
   Future<void> logout() async {
-    await _tokenStorage.clearTokens();
+    final refreshToken = await _tokenStorage.getRefreshToken();
+    try {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
+        await _apiClient.dio.post<void>(
+          '/auth/logout',
+          data: {'refresh_token': refreshToken},
+        );
+      }
+    } catch (_) {
+      // Logout must still clear local credentials when the device is offline.
+    } finally {
+      await _tokenStorage.clearTokens();
+    }
   }
 }

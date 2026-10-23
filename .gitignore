@@ -24,3 +24,10 @@ firebase-*.json
 Thumbs.db
 .idea/
 .vscode/
+
+# Non-code documents (kept locally only)
+docs/original/
+docs/generated/
+docs/*.docx
+docs/*.pdf
+docs/*.pptx

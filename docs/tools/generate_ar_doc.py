@@ -15,7 +15,7 @@ import os
 import subprocess
 import pypdf
 
-WORKSPACE = r"c:\Users\Youseef\Desktop\New folder (6)"
+WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "original"))
 HTML_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_AR.html")
 PDF_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_AR.pdf")
 
@@ -750,13 +750,11 @@ ul.bullet-list li {
 """
 
 def main():
-    print("Rendering Arabic PDF from existing HTML (performance box removed, compact layout)...")
-    if not os.path.exists(HTML_FILE):
-        print("HTML not found, building from template...")
-        html_content = build_arabic_html()
-        with open(HTML_FILE, "w", encoding="utf-8") as f:
-            f.write(html_content)
-        print(f"Arabic HTML written: {HTML_FILE} ({len(html_content)} bytes)")
+    print("Building Arabic HTML and rendering PDF (performance box removed, compact layout)...")
+    html_content = build_arabic_html()
+    with open(HTML_FILE, "w", encoding="utf-8") as f:
+        f.write(html_content)
+    print(f"Arabic HTML written: {HTML_FILE} ({len(html_content)} bytes)")
 
     html_uri = "file:///" + os.path.abspath(HTML_FILE).replace("\\", "/")
     print(f"Rendering PDF to: {PDF_FILE} using {CHROME_PATH}")

@@ -31,6 +31,11 @@ def hash_otp(phone: str, code: str) -> str:
     return hmac.new(key, f"{phone}:{code}".encode(), hashlib.sha256).hexdigest()
 
 
+def hash_refresh_token(token: str) -> str:
+    """Store only a one-way fingerprint of refresh tokens in the database."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 def verify_otp_hash(phone: str, code: str, expected_hash: str) -> bool:
     return hmac.compare_digest(hash_otp(phone, code), expected_hash)
 

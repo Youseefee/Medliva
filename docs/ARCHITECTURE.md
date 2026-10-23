@@ -11,22 +11,20 @@ flowchart LR
   end
   subgraph Backend["Backend Services"]
     API["FastAPI REST + WebSocket"]
-    WK["Celery Worker"]
-    BT["Celery Beat"]
+    CRON["Supabase Cron"]
   end
   subgraph Cloud["Cloud Infrastructure (Free Tier)"]
     PG[("PostgreSQL (Supabase)")]
-    RD[("Redis (Upstash)")]
     S3[("Object Storage (Supabase)")]
   end
   UI --> DB --> AL
   DB --> SQ --> API
   API --> PG
-  API --> RD
   API --> S3
   API --> AI["Gemini / Whisper"]
-  BT --> WK --> FCM["FCM"]
-  WK --> TW["Twilio"]
+  CRON --> API
+  API --> FCM["FCM"]
+  API --> TW["Twilio"]
   PORTAL["Doctor Portal (Next.js)"] --> API
 ```
 
@@ -54,16 +52,16 @@ sequenceDiagram
   participant A as Alarm (Device)
   participant P as Patient
   participant API
-  participant B as Celery Beat
+  participant B as Supabase Cron
   participant C as Caregiver
   A->>P: Full-screen alarm + TTS
   alt Taken
     P->>API: POST /adherence/log (taken)
     API-->>C: WebSocket update
   else No response
-    B->>API: scan unacknowledged doses (every 60s)
-    B->>C: +30m Tier-1 FCM
-    B->>C: +60m Tier-2 FCM + call button
+    B->>API: protected escalation job (every 60s)
+    API->>C: +30m Tier-1 FCM
+    API->>C: +60m Tier-2 FCM + call button
   end
 ```
 

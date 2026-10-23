@@ -13,7 +13,7 @@ import os
 import subprocess
 import pypdf
 
-WORKSPACE = r"c:\Users\Youseef\Desktop\New folder (6)"
+WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "original"))
 HTML_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_EN.html")
 PDF_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_EN.pdf")
 

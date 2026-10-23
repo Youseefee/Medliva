@@ -6,6 +6,7 @@
 ## 📚 التوثيق
 | الملف | المحتوى |
 |---|---|
+| [docs/START_HERE.md](docs/START_HERE.md) | ⭐ خريطة البداية للإيجنت وحالة التنفيذ الفعلية |
 | [docs/MASTER_PLAN.md](docs/MASTER_PLAN.md) | ⭐ الخطة الشاملة (ابدأ من هنا) |
 | [docs/USE_CASES.md](docs/USE_CASES.md) | حالات الاستخدام بالتفصيل |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | المعمارية و Offline-First و Sequence diagrams |
@@ -20,8 +21,8 @@
 ## 🧱 الهيكل
 ```
 apps/mobile          Flutter (المريض + المرافق)
-apps/doctor-portal   Next.js (بوابة الطبيب + الأدمن)
-services/api         FastAPI + Celery
+apps/doctor-portal   Next.js (بوابة الطبيب)
+services/api         FastAPI (modular monolith)
 infra/               ملفات الإعداد والبيئة (.env) وبدائل التشغيل
 docs/                التوثيق
 ```
@@ -29,15 +30,15 @@ docs/                التوثيق
 ## 🚀 التشغيل والإعداد السحابي (بدون دوكر)
 يعتمد المشروع على خدمات سحابية مجانية وسريعة بدون الحاجة لتثبيت Docker محلياً:
 - **قاعدة البيانات والتخزين:** [Supabase](https://supabase.com) (PostgreSQL 16 + Storage للروشتات والصوتيات).
-- **الذاكرة والمهام المجدولة:** [Upstash](https://upstash.com) (Serverless Redis).
+- **المهام المجدولة:** Supabase Cron / Edge Functions، مع Redis اختياري فقط عند الحاجة لاحقاً.
 
 ```bash
 # 1. إعداد المتغيرات
-cp infra/.env.example infra/.env   # وضع روابط Supabase و Upstash
+cp infra/.env.example infra/.env   # وضع روابط Supabase وبيانات البيئة
 
 # 2. تشغيل الـ Backend
 cd services/api
-uv venv && uv pip install -r requirements.txt
+uv sync
 alembic upgrade head
 uvicorn app.main:app --reload
 ```

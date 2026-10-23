@@ -50,3 +50,26 @@ def require_role(*roles: UserRole):
         return current_user
 
     return role_checker
+
+
+async def check_patient_access(
+    patient_id: uuid.UUID,
+    current_user: User,
+    db: AsyncSession,
+) -> bool:
+    if current_user.id == patient_id or current_user.role == UserRole.ADMIN:
+        return True
+
+    from app.models.caregiver import CaregiverLink, CaregiverLinkStatus
+
+    stmt = select(CaregiverLink).where(
+        CaregiverLink.caregiver_id == current_user.id,
+        CaregiverLink.patient_id == patient_id,
+        CaregiverLink.status == CaregiverLinkStatus.ACTIVE,
+    )
+    result = await db.execute(stmt)
+    link = result.scalar_one_or_none()
+    if not link:
+        raise AppError(403, "FORBIDDEN", "لا تملك صلاحية الوصول لبيانات هذا المريض")
+    return True
+

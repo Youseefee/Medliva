@@ -806,7 +806,7 @@ tr:nth-child(even) {
   <div class="card card-primary">
     <div class="card-title">الهيكلية الشاملة للنظام (Multi-Tier Distributed Architecture)</div>
     <p style="font-size: 9pt;">
-      يعتمد النظام على نمط المعمارية النظيفة (Clean Architecture) في الواجهات الأمامية مع بنية غير متصلة أولاً (Offline-First Local DB)، بينما يعتمد الخادم الخلفي على معمارية الخدمات المصغرة المعيارية (Modular Microservices) باستخدام Python FastAPI، وقاعدة بيانات PostgreSQL، ومحرك مهام غير متزامنة Celery مدعوماً بـ Redis.
+      يعتمد النظام على نمط المعمارية النظيفة (Clean Architecture) في الواجهات الأمامية مع بنية غير متصلة أولاً (Offline-First Local DB)، بينما يعتمد الخادم الخلفي على Modular Monolith باستخدام Python FastAPI وSQLAlchemy وAlembic فوق PostgreSQL. المهام الدورية للمراقبة والتصعيد تبدأ عبر Supabase Cron وواجهات FastAPI داخلية محمية، مع إبقاء Redis اختيارياً عند الحاجة فقط.
     </p>
   </div>
 
@@ -831,12 +831,12 @@ tr:nth-child(even) {
     <div class="diagram-row" style="margin-top: 12px;">
       <div class="diagram-node" style="border-color: #d97706;">
         <strong>محرك الذكاء الاصطناعي</strong><br>
-        <span style="font-size: 8pt; color: #555;">GPT-4o Vision (Prescriptions) + Whisper (Voice)</span>
+         <span style="font-size: 8pt; color: #555;">Gemini Vision + Hosted STT + Deterministic Triage</span>
       </div>
       <div class="diagram-arrow">⇄</div>
       <div class="diagram-node" style="border-color: #9333ea;">
         <strong>محرك الجدولة والرسائل</strong><br>
-        <span style="font-size: 8pt; color: #555;">Celery Worker + Redis Queue + FCM Push</span>
+         <span style="font-size: 8pt; color: #555;">Supabase Cron + Protected Jobs + FCM Push</span>
       </div>
       <div class="diagram-arrow">⇄</div>
       <div class="diagram-node" style="border-color: #dc2626;">
@@ -887,7 +887,7 @@ CREATE TABLE sync_queue (
       <tr>
         <td><code>users</code></td>
         <td><code>id (PK)</code></td>
-        <td><code>phone_number, full_name, role (patient/caregiver), password_hash, created_at</code></td>
+        <td><code>phone_number, full_name, role (patient/caregiver/admin), created_at</code><br>الدور لا يحدده التسجيل العام؛ caregiver عبر pairing وadmin provisioned separately.</td>
         <td>إدارة الحسابات والمصادقة</td>
       </tr>
       <tr>
@@ -942,13 +942,13 @@ CREATE TABLE sync_queue (
 <div class="avoid-break">
   <div class="section-header">
     <h2><span class="section-number">04</span> المرحلة الرابعة: تطوير الخادم والواجهات الخلفية (Backend API & Services)</h2>
-    <span class="section-phase-tag">Phase 4: FastAPI & Microservices</span>
+    <span class="section-phase-tag">Phase 4: FastAPI Modular Monolith</span>
   </div>
 
   <div class="card card-primary">
     <div class="card-title">حزمة التقنيات المختارة للخادم (Backend Tech Stack Rationale)</div>
     <p style="font-size: 9pt;">
-      تم اختيار <strong>Python FastAPI</strong> لتطوير الـ Backend؛ نظراً لأدائه الفائق المبني على <code>asyncio</code> و <code>Starlette</code>، ودعمه الأصيل للـ Pydantic v2 لتأكيد صحة البيانات تلقائياً وتوليد وثائق OpenAPI (Swagger)، بالإضافة إلى تكامله السلس والمباشر مع مكتبات الذكاء الاصطناعي ومعالجة اللغات الطبيعية (LangChain, OpenAI, Whisper, PyTorch).
+      تم اختيار <strong>Python FastAPI</strong> لتطوير الـ Backend؛ نظراً لأدائه المبني على <code>asyncio</code> و <code>Starlette</code>، ودعمه الأصيل للـ Pydantic v2 لتأكيد صحة البيانات وتوليد وثائق OpenAPI. تُدار البيانات عبر <strong>SQLAlchemy 2 + Alembic + PostgreSQL</strong>، وتبقى الخدمات داخل Modular Monolith بسيط قابل للتوسع.
     </p>
   </div>
 
@@ -965,8 +965,8 @@ CREATE TABLE sync_queue (
     <tbody>
       <tr>
         <td><span class="badge badge-must">POST</span></td>
-        <td><code>/api/v1/auth/otp-login</code></td>
-        <td>إرسال كود OTP للهاتف والتحقق وتوليد JWT Access & Refresh Tokens.</td>
+        <td><code>/api/v1/auth/otp/request</code><br><code>/api/v1/auth/otp/verify</code></td>
+        <td>إرسال كود OTP والتحقق منه. التسجيل العام ينشئ patient فقط، ثم يتم إصدار JWT قصير وRefresh Session قابلة للتدوير والإلغاء.</td>
         <td>Public</td>
       </tr>
       <tr>
@@ -1018,7 +1018,7 @@ CREATE TABLE sync_queue (
   <div class="step-box">
     <div class="step-num">1</div>
     <div class="step-content">
-      <h4>المسح الدوري المنتظم (Celery Beat Scheduled Task)</h4>
+        <h4>المسح الدوري المنتظم (Supabase Cron Scheduled Job)</h4>
       <p>عامل يعمل كل 60 ثانية يفحص جدول <code>schedules</code> مع <code>intake_logs</code> للعثور على أي جرعة انقضى موعدها المحدد بأكثر من 15 دقيقة دون تسجيل حالة (Unacknowledged).</p>
     </div>
   </div>
@@ -1439,49 +1439,23 @@ def calculate_depletion_date(current_stock: int, daily_dose_count: int) -> dict:
   <div class="card card-primary">
     <div class="card-title">معمارية النشر السحابي والحاويات (Docker & Cloud Infrastructure)</div>
     <p style="font-size: 8.5pt;">
-      تم حزم الخادم الخلفي ومكوناته بالكامل باستخدام Docker لضمان سرعة النشر وسهولة التوسع الأفقي (Horizontal Scaling) على بيئات السحابة (AWS / DigitalOcean / GCP):
+      التشغيل الأساسي Cloud-First: PostgreSQL وStorage عبر Supabase، والمهام الدورية عبر Supabase Cron. يبقى Docker Compose خياراً محلياً، بينما يمكن نشر FastAPI على أي منصة تدعم HTTPS وإعادة التشغيل والتوسع الأفقي:
     </p>
     <div class="code-box">
-# Docker Compose Production Architecture Stack
-version: '3.8'
+# Cloud-first deployment shape
 services:
-  api_gateway:
-    image: careelder-backend:latest
-    build: .
+  api:
+    build: ./services/api
     restart: always
     environment:
-      - DATABASE_URL=postgresql://user:pass@postgres_db:5432/careelder
-      - REDIS_URL=redis://redis_broker:6379/0
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENV=prod
+      - DATABASE_URL=${DATABASE_URL} # Supabase PostgreSQL
+      - JWT_SECRET=${JWT_SECRET}
     ports:
       - "8000:8000"
 
-  celery_worker:
-    image: careelder-backend:latest
-    command: celery -A app.core.celery_app worker --loglevel=info
-    restart: always
-
-  celery_beat:
-    image: careelder-backend:latest
-    command: celery -A app.core.celery_app beat --loglevel=info
-    restart: always
-
-  postgres_db:
-    image: postgres:16-alpine
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-  redis_broker:
-    image: redis:7-alpine
-
-  nginx_ssl:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./certbot/conf:/etc/letsencrypt</div>
+# Supabase Cron -> protected FastAPI job endpoint
+# Redis is optional and is not required by the MVP.</div>
   </div>
 
   <h3>متطلبات وسياسات متجري Google Play و Apple App Store</h3>
@@ -1617,7 +1591,7 @@ services:
   <div class="card card-success">
     <div class="card-title">س8: كيف تضمنون قدرة الخادم على تحمل آلاف التنبيهات في نفس اللحظة (Scalability)؟</div>
     <p style="font-size: 8.5pt;">
-      <strong>الإجابة الهندسية:</strong> النقطة المعمارية الأقوى في تطبيقنا هي أن الخادم لا يطلق منبهات المريض عبر الشبكة؛ فالمنبهات تُطلق محلياً بالكامل من المعالج الداخلي لكل هاتف. دور الخادم يقتصر على استقبال "تأكيدات التناول" والتصعيد للمرافقين فقط. وبفضل استخدام FastAPI غير المتزامن (Async/Await) و Redis كـ Message Broker مع Celery Workers معزولة، يمكن لنسخة خادم واحدة معالجة أكثر من 15,000 طلب تصعيد في الثانية الواحدة باستهلاك موارد متواضع جداً.
+      <strong>الإجابة الهندسية:</strong> النقطة المعمارية الأقوى في تطبيقنا هي أن الخادم لا يطلق منبهات المريض عبر الشبكة؛ فالمنبهات تُطلق محلياً بالكامل من هاتف المريض. دور الخادم يقتصر على استقبال تأكيدات التناول والتصعيد للمرافقين. يتم تشغيل مهام التصعيد عبر Supabase Cron إلى endpoint داخلي محمي، مع جعل العمليات idempotent حتى لا يتكرر التنبيه عند إعادة المحاولة، ويمكن تشغيل API بأكثر من نسخة عند الحاجة.
     </p>
   </div>
 
@@ -1701,7 +1675,7 @@ services:
     return html
 
 def main():
-    workspace_dir = r"c:\Users\Youseef\Desktop\New folder (6)"
+    workspace_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "original"))
     html_file = os.path.join(workspace_dir, "CareElder_Graduation_Project_Master_Plan.html")
     pdf_file_en = os.path.join(workspace_dir, "CareElder_Complete_Development_Guide.pdf")
     pdf_file_ar = os.path.join(workspace_dir, "مشروع_تخرج_تطبيق_رعاية_كبار_السن_دليل_التطوير_الشامل.pdf")

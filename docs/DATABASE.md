@@ -16,6 +16,7 @@ erDiagram
   USERS ||--o{ REPORT_SHARES : shares
   USERS ||--o{ VOICE_NOTES : receives
   USERS ||--o{ ALERTS : triggers
+  USERS ||--o{ REFRESH_SESSIONS : owns
   DRUG_CATALOG ||--o{ MEDICATIONS : references
 ```
 
@@ -35,6 +36,7 @@ erDiagram
 | `voice_notes` | from_user FK, to_patient FK, medication_id FK?, audio_url, duration_s | |
 | `alerts` | patient_id FK, type ENUM(missed_dose,critical_vital,low_stock,expiry,sos), tier, payload JSONB, sent_at, acknowledged_at | |
 | `audit_logs` | actor_id, action, entity, entity_id, diff JSONB | |
+| `refresh_sessions` | user_id FK, jti, token_hash, expires_at, revoked_at | لا يتم تخزين refresh token نفسه؛ rotation وإلغاء لكل جلسة |
 
 ## قاعدة الجهاز (Drift)
 نسخة مصغرة: `medications`, `schedules`, `intake_logs`, `vitals_logs`, `sync_queue(id, entity, payload, status, retries)`.

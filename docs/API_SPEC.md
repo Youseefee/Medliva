@@ -1,52 +1,89 @@
 # مواصفات الـ API (v1)
 
-- Base: `/api/v1` · JSON · Auth: `Authorization: Bearer <JWT>`
-- Errors: `{ "error": { "code": "STRING", "message": "..." } }`
-- Swagger تلقائي على `/docs`.
+- **Base URL:** `/api/v1` (باستثناء `/health` على الجذر `/`)
+- **Format:** JSON (`multipart/form-data` لرفع صورة الروشتة)
+- **Auth:** `Authorization: Bearer <access_token>`
+- **Errors:** `{ "error": { "code": "STRING", "message": "..." } }`
+- **Swagger / OpenAPI:** متاح في بيئة التطوير على `/docs` و`/redoc`.
 
-| Method | Endpoint | الصلاحية | الوصف |
-|---|---|---|---|
-| POST | `/auth/otp/request` | Public | `{phone}` |
-| POST | `/auth/otp/verify` | Public | `{phone, code}` → `{access, refresh, user}` |
-| POST | `/auth/refresh` | Public | |
-| GET/PATCH | `/me` | Auth | |
-| POST | `/caregiver/pairing-code` | Patient | توليد كود 6 أرقام (10 د) |
-| POST | `/caregiver/pair` | Caregiver | `{code}` |
-| GET | `/caregiver/patients` | Caregiver | |
-| GET/POST | `/patients/{id}/medications` | Linked | |
-| PATCH/DELETE | `/medications/{id}` | Linked | |
-| GET/POST | `/medications/{id}/schedules` | Linked | |
-| GET | `/patients/{id}/today` | Linked | جرعات اليوم وحالتها |
-| POST | `/adherence/log` | Patient | خصم مخزون + بث WS |
-| POST | `/sync/batch` | Patient | `{items:[{client_uuid, entity, op, payload}]}` |
-| POST | `/ai/scan-prescription` | Auth | multipart image |
-| POST | `/ai/parse-voice-vitals` | Patient | multipart audio |
-| GET/POST | `/patients/{id}/vitals` | Linked | فلترة `type, from, to` |
-| GET | `/patients/{id}/inventory/forecast` | Linked | |
-| POST | `/patients/{id}/inventory/refill-order` | Caregiver | يرجّع نص + رابط `wa.me` |
-| POST | `/patients/{id}/voice-notes` | Caregiver | |
-| GET | `/patients/{id}/reports/pdf?days=30` | Linked | |
-| POST | `/patients/{id}/reports/share` | Linked | → `{url, qr_png, expires_at}` |
-| GET | `/public/reports/{token}` | Token | بوابة الطبيب |
-| POST | `/emergency/sos` | Patient | `{lat, lng}` |
-| POST | `/devices` | Auth | تسجيل FCM token |
-| WS | `/ws/patients/{id}` | Linked | events: `intake`, `vital`, `alert` |
+## جدول المسارات الفعلية (Routes)
+
+| Method | Path | Auth / الصلاحية | Request Schema | Response Schema | الوصف |
+|---|---|---|---|---|---|
+| `GET` | `/health` | Public | — | `dict[str, str]` | فحص حالة الخادم (موجود على الجذر خارج `/api/v1`) |
+| `POST` | `/auth/otp/request` | Public | `OtpRequestIn` | `OtpRequestOut` | طلب إرسال رمز التحقق OTP لرقم هاتف مصري |
+| `POST` | `/auth/otp/verify` | Public | `OtpVerifyIn` | `AuthTokensOut` | التحقق من الرمز وإصدار `access_token` و`refresh_token` وبيانات `UserOut` |
+| `POST` | `/auth/refresh` | Public | `TokenRefreshIn` | `TokenRefreshOut` | تدوير رمز التجديد وإصدار زوج توكنات جديد |
+| `POST` | `/auth/logout` | Public | `TokenRefreshIn` | `204 No Content` | إبطال جلسة التجديد الحالية |
+| `GET` | `/me` | Auth | — | `UserOut` | جلب بيانات المستخدم الحالي |
+| `PATCH` | `/me` | Auth | `UserUpdateIn` | `UserOut` | تحديث بيانات المستخدم الحالي (الاسم، اللغة، المنطقة الزمنية، تاريخ الميلاد، العنوان) |
+| `POST` | `/caregiver/pairing-code` | Patient | — | `PairingCodeResponse` | توليد كود اقتران من 6 أرقام صالح لمدة 10 دقائق |
+| `POST` | `/caregiver/pair` | Caregiver | `PairCaregiverRequest` | `LinkedPatientOut` | ربط حساب المرافق بالمريض عبر كود الاقتران |
+| `GET` | `/caregiver/patients` | Caregiver | — | `list[LinkedPatientOut]` | قائمة المرضى المرتبطين بالمرافق الحالي |
+| `GET` | `/patients/{patient_id}/medications` | Patient / Linked Caregiver | — | `list[MedicationOut]` | قائمة الأدوية النشطة للمريض مع مواعيدها |
+| `POST` | `/patients/{patient_id}/medications` | Patient / Linked Caregiver | `MedicationCreate` | `MedicationOut` (`201`) | إضافة دواء جديد للمريض مع جدول مواعيده الاختياري |
+| `PATCH` | `/medications/{medication_id}` | Patient / Linked Caregiver | `MedicationUpdate` | `MedicationOut` | تعديل بيانات الدواء أو مخزونه أو حالته |
+| `DELETE` | `/medications/{medication_id}` | Patient / Linked Caregiver | — | `dict[str, str]` | إلغاء تفعيل الدواء (`is_active = false`) |
+| `GET` | `/medications/{medication_id}/schedules` | Patient / Linked Caregiver | — | `list[ScheduleOut]` | جلب مواعيد جرعات دواء معيّن |
+| `POST` | `/medications/{medication_id}/schedules` | Patient / Linked Caregiver | `ScheduleCreate` | `ScheduleOut` (`201`) | إضافة موعد جرعة جديد لدواء معيّن |
+| `GET` | `/patients/{patient_id}/today` | Patient / Linked Caregiver | — | `list[TodayDoseOut]` | جلب جدول جرعات اليوم للمريض مع حالة كل جرعة (`pending` / `taken` / `skipped` / `missed` / `snoozed`) |
+| `POST` | `/adherence/log` | Patient / Linked Caregiver | `IntakeLogCreate` | `IntakeLogOut` | تسجيل تناول/تخطي/تأجيل الجرعة (مع خصم المخزون وإصدار تنبيه انخفاض المخزون عند اللزوم) |
+| `POST` | `/sync/batch` | Auth | `SyncBatchRequest` | `SyncBatchResponse` | مزامنة دفعية للسجلات المسجلة بدون إنترنت (`intake_log`, `vitals_log`) |
+| `GET` | `/patients/{patient_id}/vitals` | Patient / Linked Caregiver | Query: `type`, `limit` | `list[VitalsOut]` | جلب سجل القياسات الحيوية للمريض مع إمكانية الفلترة بنوع القياس (`bp`, `glucose`, `pulse`) |
+| `POST` | `/patients/{patient_id}/vitals` | Patient / Linked Caregiver | `VitalsCreate` | `VitalsOut` (`201`) | تسجيل قياس حيوي جديد وحساب تصنيفه الطبي (`normal`, `borderline`, `critical`) |
+| `POST` | `/ai/parse-voice-vitals` | Auth | `VoiceVitalsRequest` | `VoiceVitalsResponse` | تحليل النص الصوتي للقياسات الحيوية باللهجة المصرية واستخراج القيم والتصنيف |
+| `POST` | `/ai/scan-prescription` | Auth | `multipart/form-data` (`file`) | `PrescriptionScanResponse` | مسح صورة الروشتة واستخراج الأدوية ومطابقتها مع دليل الأدوية |
+| `GET` | `/patients/{patient_id}/inventory/forecast` | Patient / Linked Caregiver | — | `InventoryForecastOut` | حساب الأيام المتبقية لكل دواء وعدد الأدوية منخفضة المخزون أو منتهية الصلاحية |
+| `POST` | `/patients/{patient_id}/inventory/refill-order` | Patient / Linked Caregiver | `RefillOrderRequest` | `RefillOrderOut` | توليد نص طلب إعادة التعبئة ورابط واتساب (`wa.me`) للصيدلية |
+| `POST` | `/emergency/sos` | Auth | `SosRequest` | `SosResponse` | إطلاق نداء استغاثة عاجل (SOS) مع الموقع الجغرافي الاختياري وإشعار جهات الاتصال والمرافقين |
+| `GET` | `/patients/{patient_id}/contacts` | Patient / Linked Caregiver | — | `list[EmergencyContactOut]` | جلب قائمة جهات اتصال الطوارئ الخاصة بالمريض |
+| `POST` | `/patients/{patient_id}/contacts` | Patient / Linked Caregiver | `EmergencyContactCreate` | `EmergencyContactOut` (`201`) | إضافة جهة اتصال طوارئ جديدة للمريض |
+| `POST` | `/patients/{patient_id}/reports/share` | Patient / Linked Caregiver | `ReportShareCreate` | `ReportShareOut` | إنشاء رابط مشاركة مؤقت لتقرير المريض الطبي |
+| `GET` | `/public/reports/{token}` | Public Token | — | `PublicReportOut` | عرض التقرير الطبي العام للمريض عبر رمز المشاركة الصالح |
+| `POST` | `/devices` | Auth | `DeviceRegisterRequest` | `dict[str, str]` | تسجيل أو تحديث رمز إشعارات الجهاز (`fcm_token`) |
 
 ## أمثلة
-**POST /adherence/log**
+
+**POST `/api/v1/adherence/log`** (`IntakeLogCreate` → `IntakeLogOut`)
 ```json
-{ "client_uuid": "6f1c...", "schedule_id": "…", "scheduled_time": "2026-10-04T05:30:00Z",
-  "actual_time": "2026-10-04T05:34:12Z", "status": "taken" }
+{
+  "client_uuid": "6f1c9a10-1234-4b5c-89ab-0123456789ab",
+  "schedule_id": "2c8d3f01-1234-4b5c-89ab-0123456789ab",
+  "scheduled_time": "2026-10-23T08:00:00Z",
+  "actual_time": "2026-10-23T08:04:12Z",
+  "status": "taken",
+  "logged_offline": false
+}
 ```
-**POST /ai/scan-prescription → 200**
+
+**POST `/api/v1/ai/scan-prescription`** (`multipart/form-data` → `PrescriptionScanResponse`)
 ```json
-{ "medications": [ { "drug_trade_name": "Glucophage", "dosage_mg": 500, "frequency_per_day": 2,
-  "meal_relation": "after_meals", "times": ["08:30","20:30"], "inventory_pills": 60,
-  "confidence_score": 0.96, "catalog_match_id": "…" } ] }
+{
+  "medications": [
+    {
+      "drug_trade_name": "Concor 5mg",
+      "active_ingredient": "Bisoprolol",
+      "dosage_mg": "5mg",
+      "frequency_per_day": 1,
+      "meal_relation": "after_meal",
+      "times": ["08:00"],
+      "inventory_pills": 30,
+      "confidence_score": 0.96
+    }
+  ],
+  "confidence": 0.96
+}
 ```
-**POST /ai/parse-voice-vitals → 200**
+
+**POST `/api/v1/ai/parse-voice-vitals`** (`VoiceVitalsRequest` → `VoiceVitalsResponse`)
 ```json
-{ "transcript": "الضغط النهارده 135 على 85", "type": "bp",
-  "value_primary": 135, "value_secondary": 85, "band": "borderline",
-  "message_ar": "الضغط مرتفع شوية، قلل الملح" }
+{
+  "transcript": "الضغط النهارده 135 على 85",
+  "type": "bp",
+  "value_primary": 135.0,
+  "value_secondary": 85.0,
+  "meal_context": null,
+  "band": "borderline",
+  "message_ar": "الضغط مرتفع قليلاً، يُنصح بالراحة وتقليل الملح والمتابعة"
+}
 ```

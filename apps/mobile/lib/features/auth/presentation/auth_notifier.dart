@@ -43,7 +43,6 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
   Future<void> verifyOtp({
     required String phone,
     required String code,
-    String? role,
     String? name,
   }) async {
     state = const AsyncValue.loading();
@@ -52,7 +51,6 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
       final user = await repo.verifyOtp(
         phone: phone,
         code: code,
-        role: role,
         name: name,
       );
       state = AsyncValue.data(user);

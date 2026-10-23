@@ -65,9 +65,9 @@
 | API | **Python 3.12 + FastAPI** (async) + Pydantic v2 |
 | ORM / Migrations | **SQLAlchemy 2.0 (async)** + **Alembic** |
 | Database | **PostgreSQL 16** (+ TimescaleDB اختياري للقياسات) |
-| Cache / Broker | **Redis 7** |
-| Background Jobs | **Celery + Celery Beat** (مراقب الجرعات الفائتة كل 60 ث، تنبيهات المخزون، الصلاحية) |
-| Realtime | FastAPI WebSockets + Redis Pub/Sub |
+| Cache / Broker | Optional Redis later; not required for the MVP |
+| Background Jobs | **Supabase Cron + protected FastAPI job endpoints** (مراقب الجرعات الفائتة وتنبيهات المخزون والصلاحية) |
+| Realtime | FastAPI WebSockets + FCM fallback |
 | Auth | OTP عبر الهاتف + **JWT** (Access 15د / Refresh 30 يوم)، RBAC |
 | Storage | **Supabase Storage** (S3-compatible) للروشتات والصوتيات |
 | PDF | **WeasyPrint** + Jinja2 (دعم عربي) |
@@ -88,7 +88,7 @@
 
 ### 🚀 DevOps & Cloud
 - **قاعدة البيانات والتخزين:** **Supabase** (PostgreSQL 16 + Storage للروشتات والصوتيات).
-- **الذاكرة والكاش:** **Upstash** (Serverless Redis لـ Celery والمهام المجدولة).
+- **المهام المجدولة:** **Supabase Cron** يستدعي endpoints داخلية محمية؛ Redis يضاف فقط إذا ظهرت حاجة فعلية للكاش أو queue.
 - **التشغيل المحلي:** تشغيل مباشر وسريع عبر Python `uv` بدون الحاجة لتثبيت Docker.
 - **GitHub Actions**: lint (ruff, flutter analyze) → tests → build → deploy.
 - Hosting: Railway / Render / VPS (Hetzner) للـ Backend، Vercel للبوابة.
@@ -108,12 +108,10 @@ flowchart LR
   end
   subgraph Server["Backend Services"]
     API["FastAPI REST + WS"]
-    W["Celery Workers"]
-    B["Celery Beat"]
+    CRON["Supabase Cron"]
   end
   subgraph Cloud["Cloud Infrastructure (Free Tier)"]
     PG[("PostgreSQL (Supabase)")]
-    R[("Redis (Upstash)")]
     S3[("Supabase Storage")]
   end
   AI["Gemini / Whisper"]
@@ -125,12 +123,12 @@ flowchart LR
   P <--> API
   C <--> API
   API --> PG
-  API --> R
   API --> S3
   API --> AI
-  B --> W --> FCM
-  W --> TW
-  W --> PG
+  CRON --> API
+  API --> FCM
+  API --> TW
+  API --> PG
   DOC --> API
 ```
 
@@ -249,9 +247,9 @@ careelder/
 |---|---|---|
 | **0. التحليل والتخطيط** | أسبوع 1 | SRS، Use Cases، UML (Use Case / Sequence / Class)، Personas |
 | **1. التصميم UX/UI** | أسبوع 2–3 | Wireframes + Figma Hi-Fi (وضع المريض المبسّط + وضع المرافق)، Design System بتباين عالي، اختبار مع 3–5 كبار سن |
-| **2. الأساسات** | أسبوع 3–4 | Monorepo، إعداد Supabase و Upstash، DB schema + Alembic، Auth OTP/JWT، CI، هيكل Flutter + Theme + Localization |
+| **2. الأساسات** | أسبوع 3–4 | Monorepo، إعداد Supabase، DB schema + Alembic، Auth OTP/JWT، CI، هيكل Flutter + Theme + Localization |
 | **3. MVP الأدوية والمنبه** ⭐ | أسبوع 5–7 | CRUD أدوية/مواعيد، Drift DB، المنبه الصارم Full-Screen، Boot Recovery، TTS، تسجيل الجرعة Offline + Sync |
-| **4. المرافق والتصعيد** | أسبوع 7–8 | Pairing، Dashboard لحظي (WS)، FCM، Celery Beat watcher، سلم التصعيد، الرسائل الصوتية |
+| **4. المرافق والتصعيد** | أسبوع 7–8 | Pairing، Dashboard لحظي (WS)، FCM، Supabase Cron watcher، سلم التصعيد، الرسائل الصوتية |
 | **5. طبقة الذكاء الاصطناعي** | أسبوع 9–11 | مسح الروشتة + بطاقة التأكيد، قاعدة أدوية مصرية، القياسات الصوتية بالعامية + Rule Engine للفرز |
 | **6. المخزون والتقارير** | أسبوع 11–12 | توقع النفاد، تنبيه 5 أيام، طلب WhatsApp، الصلاحية، PDF عربي، QR + بوابة الطبيب |
 | **7. SOS والأمان** | أسبوع 13 | زر الاستغاثة + GPS + Twilio، تشفير، Rate limiting، Audit logs |
@@ -274,7 +272,7 @@ flowchart LR
 
 | الدور | المسؤوليات |
 |---|---|
-| Team Lead / Backend | FastAPI، DB، Celery، DevOps |
+| Team Lead / Backend | FastAPI، DB، Supabase Cron، DevOps |
 | Mobile Dev 1 | المنبهات Native، Offline/Sync، واجهة المريض |
 | Mobile Dev 2 | واجهة المرافق، Charts، SOS، Localization |
 | AI Engineer | OCR، STT، Parsers، قاعدة الأدوية، تقييم الدقة |
@@ -290,7 +288,7 @@ flowchart LR
 |---|---|---|
 | Unit (Backend) | pytest, pytest-asyncio | Triage rules، Inventory forecast، Escalation ≥ 80% |
 | Unit/Widget (Flutter) | flutter_test, mocktail | |
-| Integration | httpx + Testcontainers (Postgres/Redis) | |
+| Integration | httpx + Testcontainers (Postgres) | |
 | E2E | Flutter `integration_test` / Patrol | سيناريو المنبه كامل |
 | AI Evaluation | Dataset من 100+ روشتة و 200 تسجيل صوتي | Precision/Recall لكل حقل |
 | Usability | SUS Questionnaire مع كبار السن | هدف ≥ 75 |
@@ -337,4 +335,4 @@ flowchart LR
 2. تحديد أعضاء الفريق وتوزيع الأدوار (القسم 9).
 3. بدء Sprint 1 حسب [ROADMAP.md](ROADMAP.md).
 4. `flutter create` داخل `apps/mobile` و FastAPI skeleton داخل `services/api` (Sprint 2).
-5. إعداد المتغيرات السحابية: ضبط بيانات Supabase و Upstash داخل `infra/.env` والتشغيل عبر `uv`.
+5. إعداد المتغيرات السحابية: ضبط بيانات Supabase داخل `infra/.env` والتشغيل عبر `uv`.

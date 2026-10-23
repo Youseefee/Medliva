@@ -22,7 +22,9 @@ class UserOut(BaseModel):
 
 class UserUpdateIn(BaseModel):
     name: str | None = Field(None, max_length=100)
+    role: UserRole | None = None
     language: str | None = Field(None, max_length=10)
     timezone: str | None = Field(None, max_length=50)
     birth_date: date | None = None
     address: str | None = None
+

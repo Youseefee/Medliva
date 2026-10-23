@@ -3,9 +3,9 @@
 | Sprint | الأسابيع | الهدف | أهم المهام | معيار القبول |
 |---|---|---|---|---|
 | S1 | 1–2 | التحليل والتصميم | SRS، UML، Personas، Wireframes، Figma Design System | موافقة المشرف على SRS + Figma |
-| S2 | 3–4 | الأساسات | Monorepo، ربط Supabase + Upstash، Alembic schema، OTP/JWT، CI، Flutter skeleton + Theme + l10n | تسجيل دخول end-to-end |
+| S2 | 3–4 | الأساسات | Monorepo، ربط Supabase، Alembic schema، OTP/JWT، CI، Flutter skeleton + Theme + l10n | تسجيل دخول end-to-end |
 | S3 | 5–6 | ⭐ الأدوية والمنبه | CRUD أدوية/مواعيد، Drift، Native alarm + Full-Screen + Boot receiver، TTS | المنبه يرن Offline وبعد Restart |
-| S4 | 7–8 | المرافق والتصعيد | Pairing، Sync batch، WebSocket، FCM، Celery watcher، سلّم التصعيد، Voice notes | تنبيه للمرافق خلال 30 د من عدم التأكيد |
+| S4 | 7–8 | المرافق والتصعيد | Pairing، Sync batch، WebSocket، FCM، Supabase Cron watcher، سلّم التصعيد، Voice notes | تنبيه للمرافق خلال 30 د من عدم التأكيد |
 | S5 | 9–10 | AI-1: الروشتة | Drug catalog، Gemini OCR، بطاقة التأكيد، Dataset + تقييم | دقة ≥ 85% |
 | S6 | 11–12 | AI-2: الصوت + المخزون | Whisper، Parser عامي، Triage، Inventory forecast، WhatsApp، Expiry | دقة القياسات ≥ 95% |
 | S7 | 13–14 | التقارير + SOS + الأمان | PDF عربي، QR + Doctor portal، SOS + Twilio، Rate limit، Audit | الطبيب يفتح التقرير من QR |

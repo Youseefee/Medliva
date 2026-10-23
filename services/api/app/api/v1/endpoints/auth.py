@@ -1,8 +1,8 @@
 import uuid
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends
-from sqlalchemy import desc, select
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -14,11 +14,12 @@ from app.core.security import (
     decode_token,
     generate_otp,
     hash_otp,
+    hash_refresh_token,
     utcnow,
     verify_otp_hash,
 )
 from app.db.session import get_db
-from app.models.user import OtpChallenge, User
+from app.models.user import OtpChallenge, RefreshSession, User
 from app.schemas.auth import (
     AuthTokensOut,
     OtpRequestIn,
@@ -33,6 +34,21 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
 
 
+def _refresh_session_from_token(user_id: uuid.UUID, token: str) -> RefreshSession:
+    payload = decode_token(token, expected_type="refresh")
+    jti = payload.get("jti")
+    expires_at = payload.get("exp")
+    if not isinstance(jti, str) or not isinstance(expires_at, (int, float)):
+        raise AppError(401, "TOKEN_INVALID", "رمز التجديد غير صالح")
+
+    return RefreshSession(
+        user_id=user_id,
+        jti=jti,
+        token_hash=hash_refresh_token(token),
+        expires_at=datetime.fromtimestamp(expires_at, tz=UTC),
+    )
+
+
 @router.post("/otp/request", response_model=OtpRequestOut)
 async def request_otp(
     body: OtpRequestIn,
@@ -40,6 +56,18 @@ async def request_otp(
 ) -> OtpRequestOut:
     phone = normalize_eg_phone(body.phone)
     now = utcnow()
+
+    request_count_stmt = (
+        select(func.count())
+        .select_from(OtpChallenge)
+        .where(
+            OtpChallenge.phone == phone,
+            OtpChallenge.created_at >= now - timedelta(hours=1),
+        )
+    )
+    request_count = int((await db.scalar(request_count_stmt)) or 0)
+    if request_count >= settings.otp_max_requests_per_hour:
+        raise AppError(429, "OTP_RATE_LIMITED", "تم تجاوز عدد طلبات رمز التحقق، حاول لاحقاً")
 
     # Check cooldown on latest challenge
     stmt = (
@@ -134,7 +162,6 @@ async def verify_otp(
         user = User(
             phone=phone,
             name=body.name.strip() if body.name else None,
-            role=body.role,
         )
         db.add(user)
 
@@ -143,6 +170,8 @@ async def verify_otp(
 
     access_token = create_token(user.id, user.role.value, "access")
     refresh_token = create_token(user.id, user.role.value, "refresh")
+    db.add(_refresh_session_from_token(user.id, refresh_token))
+    await db.commit()
 
     return AuthTokensOut(
         access_token=access_token,
@@ -160,26 +189,66 @@ async def refresh_tokens(
 ) -> TokenRefreshOut:
     payload = decode_token(body.refresh_token, expected_type="refresh")
     user_id_raw = payload.get("sub")
-    if not user_id_raw:
-        raise AppError(401, "TOKEN_INVALID", "رمز الدخول غير صالح")
+    jti = payload.get("jti")
+    if not user_id_raw or not isinstance(jti, str):
+        raise AppError(401, "TOKEN_INVALID", "رمز التجديد غير صالح")
 
     try:
         user_id = uuid.UUID(user_id_raw)
     except ValueError as e:
         raise AppError(401, "TOKEN_INVALID", "معرف المستخدم غير صالح") from e
 
+    session_stmt = (
+        select(RefreshSession)
+        .where(RefreshSession.user_id == user_id, RefreshSession.jti == jti)
+        .with_for_update()
+    )
+    session_res = await db.execute(session_stmt)
+    refresh_session = session_res.scalar_one_or_none()
+    if not refresh_session:
+        raise AppError(401, "REFRESH_REVOKED", "جلسة التجديد غير صالحة")
+    if refresh_session.revoked_at is not None:
+        raise AppError(401, "REFRESH_REUSED", "تم استخدام جلسة التجديد من قبل")
+    if as_utc(refresh_session.expires_at) <= utcnow():
+        raise AppError(401, "REFRESH_EXPIRED", "انتهت صلاحية جلسة التجديد")
+    if refresh_session.token_hash != hash_refresh_token(body.refresh_token):
+        raise AppError(401, "TOKEN_INVALID", "رمز التجديد غير صالح")
+
     stmt = select(User).where(User.id == user_id)
     res = await db.execute(stmt)
     user = res.scalar_one_or_none()
 
     if not user:
-        raise AppError(404, "USER_NOT_FOUND", "المستخدم غير موجود")
+        raise AppError(401, "TOKEN_INVALID", "المستخدم غير موجود")
 
+    refresh_session.revoked_at = utcnow()
     new_access = create_token(user.id, user.role.value, "access")
     new_refresh = create_token(user.id, user.role.value, "refresh")
+    db.add(_refresh_session_from_token(user.id, new_refresh))
+    await db.commit()
 
     return TokenRefreshOut(
         access_token=new_access,
         refresh_token=new_refresh,
         token_type="bearer",
     )
+
+
+@router.post("/logout", status_code=204)
+async def logout(body: TokenRefreshIn, db: AsyncSession = Depends(get_db)) -> Response:
+    """Revoke a refresh session. Logout is idempotent for expired/invalid tokens."""
+    try:
+        payload = decode_token(body.refresh_token, expected_type="refresh")
+    except AppError:
+        return Response(status_code=204)
+
+    jti = payload.get("jti")
+    if isinstance(jti, str):
+        stmt = select(RefreshSession).where(RefreshSession.jti == jti)
+        result = await db.execute(stmt)
+        refresh_session = result.scalar_one_or_none()
+        if refresh_session and refresh_session.revoked_at is None:
+            refresh_session.revoked_at = utcnow()
+            await db.commit()
+
+    return Response(status_code=204)

@@ -10,8 +10,10 @@ jobs:
     defaults: { run: { working-directory: services/api } }
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
       - uses: astral-sh/setup-uv@v3
-      - run: uv venv && uv pip install -r requirements.txt
+      - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run pytest
 
