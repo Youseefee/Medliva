@@ -1,32 +1,19 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TokenStorage {
-  TokenStorage({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+  TokenStorage({required SupabaseClient supabaseClient})
+    : _supabaseClient = supabaseClient;
 
-  final FlutterSecureStorage _storage;
+  final SupabaseClient _supabaseClient;
 
-  static const String _accessTokenKey = 'careelder_access_token';
-  static const String _refreshTokenKey = 'careelder_refresh_token';
+  Future<String?> getAccessToken() async =>
+      _supabaseClient.auth.currentSession?.accessToken;
 
-  Future<void> saveTokens({
-    required String accessToken,
-    required String refreshToken,
-  }) async {
-    await Future.wait([
-      _storage.write(key: _accessTokenKey, value: accessToken),
-      _storage.write(key: _refreshTokenKey, value: refreshToken),
-    ]);
+  Future<String?> refreshAccessToken() async {
+    final response = await _supabaseClient.auth.refreshSession();
+    return response.session?.accessToken;
   }
 
-  Future<String?> getAccessToken() => _storage.read(key: _accessTokenKey);
-
-  Future<String?> getRefreshToken() => _storage.read(key: _refreshTokenKey);
-
-  Future<void> clearTokens() async {
-    await Future.wait([
-      _storage.delete(key: _accessTokenKey),
-      _storage.delete(key: _refreshTokenKey),
-    ]);
-  }
+  Future<void> clearTokens() =>
+      _supabaseClient.auth.signOut(scope: SignOutScope.local);
 }

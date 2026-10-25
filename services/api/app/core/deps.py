@@ -1,13 +1,15 @@
 import uuid
 from typing import Annotated
 
+import httpx
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import AppError
-from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.user import User, UserRole
 
@@ -21,22 +23,62 @@ async def get_current_user(
     if not cred or not cred.credentials:
         raise AppError(401, "UNAUTHORIZED", "يرجى تسجيل الدخول أولاً")
 
-    payload = decode_token(cred.credentials, expected_type="access")
-    user_id_raw = payload.get("sub")
-    if not user_id_raw:
-        raise AppError(401, "TOKEN_INVALID", "رمز الدخول غير صالح")
+    settings = get_settings()
+    if not settings.supabase_url or not settings.supabase_publishable_key:
+        raise AppError(503, "AUTH_NOT_CONFIGURED", "إعدادات المصادقة غير مكتملة")
 
     try:
-        user_id = uuid.UUID(user_id_raw)
-    except ValueError as e:
-        raise AppError(401, "TOKEN_INVALID", "معرف المستخدم في الرمز غير صالح") from e
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            response = await client.get(
+                f"{settings.supabase_url.rstrip('/')}/auth/v1/user",
+                headers={
+                    "apikey": settings.supabase_publishable_key,
+                    "Authorization": f"Bearer {cred.credentials}",
+                },
+            )
+    except httpx.RequestError as exc:
+        raise AppError(503, "AUTH_PROVIDER_UNAVAILABLE", "تعذر الاتصال بخدمة تسجيل الدخول") from exc
+
+    if response.status_code == 401:
+        raise AppError(401, "TOKEN_INVALID", "رمز الدخول غير صالح أو منتهي")
+    if response.status_code != 200:
+        raise AppError(503, "AUTH_PROVIDER_UNAVAILABLE", "تعذر التحقق من تسجيل الدخول")
+
+    try:
+        auth_user = response.json()
+        if not isinstance(auth_user, dict):
+            raise TypeError("Supabase Auth response must be an object")
+        user_id = uuid.UUID(auth_user["id"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise AppError(401, "TOKEN_INVALID", "بيانات حساب Supabase غير صالحة") from exc
 
     stmt = select(User).where(User.id == user_id)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
 
     if not user:
-        raise AppError(404, "USER_NOT_FOUND", "المستخدم غير موجود")
+        metadata = auth_user.get("user_metadata") or {}
+        raw_role = str(metadata.get("role") or "patient").lower()
+        selected_role = (
+            UserRole.CAREGIVER if raw_role == UserRole.CAREGIVER.value else UserRole.PATIENT
+        )
+        user = User(
+            id=user_id,
+            email=auth_user.get("email"),
+            phone=auth_user.get("phone") or None,
+            name=metadata.get("full_name") or metadata.get("name"),
+            role=selected_role,
+        )
+        db.add(user)
+        try:
+            await db.commit()
+            await db.refresh(user)
+        except IntegrityError:
+            await db.rollback()
+            result = await db.execute(stmt)
+            user = result.scalar_one_or_none()
+            if not user:
+                raise AppError(409, "PROFILE_CONFLICT", "تعذر إنشاء ملف الحساب") from None
 
     return user
 
@@ -72,4 +114,3 @@ async def check_patient_access(
     if not link:
         raise AppError(403, "FORBIDDEN", "لا تملك صلاحية الوصول لبيانات هذا المريض")
     return True
-

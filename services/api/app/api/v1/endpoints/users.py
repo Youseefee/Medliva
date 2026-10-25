@@ -23,6 +23,10 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ) -> UserOut:
     update_data = body.model_dump(exclude_unset=True)
+    if "role" in update_data and update_data["role"] is not None:
+        from app.models.user import UserRole
+
+        update_data["role"] = UserRole(update_data["role"])
     for key, value in update_data.items():
         setattr(current_user, key, value)
 

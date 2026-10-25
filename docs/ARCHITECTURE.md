@@ -14,17 +14,19 @@ flowchart LR
     CRON["Supabase Cron"]
   end
   subgraph Cloud["Cloud Infrastructure (Free Tier)"]
+    AUTH["Supabase Auth"]
     PG[("PostgreSQL (Supabase)")]
     S3[("Object Storage (Supabase)")]
   end
   UI --> DB --> AL
   DB --> SQ --> API
+  UI --> AUTH
+  API --> AUTH
   API --> PG
   API --> S3
   API --> AI["Gemini / Whisper"]
   CRON --> API
   API --> FCM["FCM"]
-  API --> TW["Twilio"]
   PORTAL["Doctor Portal (Next.js)"] --> API
 ```
 

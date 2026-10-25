@@ -3,7 +3,6 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     adherence,
     ai,
-    auth,
     caregiver,
     devices,
     emergency,
@@ -15,9 +14,9 @@ from app.api.v1.endpoints import (
 )
 
 api_v1_router = APIRouter()
-api_v1_router.include_router(auth.router)
 api_v1_router.include_router(users.router)
 api_v1_router.include_router(caregiver.router)
+api_v1_router.include_router(caregiver.patient_router)
 api_v1_router.include_router(medications.router)
 api_v1_router.include_router(adherence.router)
 api_v1_router.include_router(vitals.router)

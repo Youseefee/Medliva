@@ -19,5 +19,5 @@ class Prescription(Base, IdTimestampMixin):
     confidence: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     verified_by: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+        ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )

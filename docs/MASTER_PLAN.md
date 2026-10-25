@@ -1,4 +1,4 @@
-# 🩺 CareElder — الخطة الشاملة للمشروع (Master Project Plan)
+# 🩺 Medliva — الخطة الشاملة للمشروع (Master Project Plan)
 
 > تطبيق ذكي لرعاية كبار السن: تذكير صارم بالأدوية، مسح الروشتات بالذكاء الاصطناعي، تسجيل القياسات بالصوت، متابعة لحظية من الأهل، إدارة مخزون الدواء، تقارير للطبيب، وزر استغاثة.
 > المصدر: [original/](original/) · تفاصيل أعمق: [USE_CASES](USE_CASES.md) · [ARCHITECTURE](ARCHITECTURE.md) · [DATABASE](DATABASE.md) · [API_SPEC](API_SPEC.md) · [AI_PIPELINE](AI_PIPELINE.md) · [ROADMAP](ROADMAP.md) · [CONVENTIONS](CONVENTIONS.md) · [SECURITY](SECURITY.md)
@@ -34,7 +34,7 @@
 | UC-04 | متابعة المرافق اللحظية + سلّم التصعيد (0 / +15 / +30 / +60 دقيقة) + رسائل صوتية من الأحفاد | المرافق | **Must** |
 | UC-05 | مخزون الأقراص + توقع النفاد + تنبيه قبل 5 أيام + طلب صيدلية عبر WhatsApp + مراقبة الصلاحية | المرافق | **Should** |
 | UC-06 | تقرير طبي (PDF) + QR مشفّر مؤقت لبوابة الطبيب | الطبيب | **Must** |
-| UC-07 | زر الاستغاثة SOS (GPS + FCM + SMS/Call) | المريض | **Must** |
+| UC-07 | زر الاستغاثة SOS (GPS + حفظ التنبيه + الاتصال بجهات الطوارئ) | المريض | **Must** |
 | UC-08 | كشف التداخلات الدوائية (Drug Interactions) | النظام | Could |
 | UC-09 | مساعد صوتي محادثي (أسئلة عن الأدوية) | المريض | Could |
 | UC-10 | تكامل ساعات ذكية / أجهزة قياس Bluetooth | المريض | Won't (v1) |
@@ -50,7 +50,7 @@
 | State Management | **Riverpod 2** (+ `riverpod_generator`) | قابل للاختبار وبسيط |
 | Navigation | **go_router** | Deep links (فتح شاشة المنبه / الـ QR) |
 | Local DB | **Drift (SQLite)** | Offline-First + استعلامات typed |
-| Networking | **Dio** + Interceptors (JWT refresh, retry) | |
+| Networking | **Dio** + Interceptors (Supabase Auth session refresh, retry) | |
 | Models | **freezed + json_serializable** | |
 | Alarms | `android_alarm_manager_plus` + `flutter_local_notifications` (fullScreenIntent) + كود Native Kotlin لـ Boot Receiver | منبه صارم يتخطى Doze |
 | Voice | `speech_to_text` (on-device) / رفع الصوت للسيرفر (Whisper) + `flutter_tts` | |
@@ -68,10 +68,10 @@
 | Cache / Broker | Optional Redis later; not required for the MVP |
 | Background Jobs | **Supabase Cron + protected FastAPI job endpoints** (مراقب الجرعات الفائتة وتنبيهات المخزون والصلاحية) |
 | Realtime | FastAPI WebSockets + FCM fallback |
-| Auth | OTP عبر الهاتف + **JWT** (Access 15د / Refresh 30 يوم)، RBAC |
+| Auth | Supabase Auth بالبريد وكلمة المرور؛ API يتحقق من Access Token، والصلاحيات محفوظة في ملف المستخدم |
 | Storage | **Supabase Storage** (S3-compatible) للروشتات والصوتيات |
 | PDF | **WeasyPrint** + Jinja2 (دعم عربي) |
-| Notifications | **Firebase Cloud Messaging** · **Twilio** (SMS/Voice) · WhatsApp deep link (`wa.me`) |
+| Notifications | **Firebase Cloud Messaging** · WhatsApp deep link (`wa.me`) |
 
 ### 🤖 AI Layer
 | المهمة | الاختيار الأساسي | البديل/Fallback |
@@ -111,23 +111,24 @@ flowchart LR
     CRON["Supabase Cron"]
   end
   subgraph Cloud["Cloud Infrastructure (Free Tier)"]
+    AUTH["Supabase Auth"]
     PG[("PostgreSQL (Supabase)")]
     S3[("Supabase Storage")]
   end
   AI["Gemini / Whisper"]
   FCM["FCM"]
-  TW["Twilio"]
   DOC["Doctor Portal (Next.js)"]
 
   P --> L --> A
   P <--> API
   C <--> API
+  P --> AUTH
+  API --> AUTH
   API --> PG
   API --> S3
   API --> AI
   CRON --> API
   API --> FCM
-  API --> TW
   API --> PG
   DOC --> API
 ```
@@ -158,14 +159,14 @@ erDiagram
 
 | الجدول | أهم الحقول |
 |---|---|
-| `users` | id, phone, name, role (patient/caregiver/admin), language, birth_date, created_at |
+| `users` | id, email, optional phone, name, role (patient/caregiver/admin), language, birth_date, created_at |
 | `caregiver_links` | caregiver_id, patient_id, pairing_code, status, permissions_mask, linked_at |
 | `medications` | patient_id, name, trade_name, active_ingredient, form, strength, pill_image_url, stock_count, alert_threshold_days, expiry_date |
 | `schedules` | medication_id, time_of_day, days_mask, dose_amount, meal_relation, instructions_ar, is_active |
 | `intake_logs` | schedule_id, patient_id, scheduled_time, actual_time, status (taken/snoozed/missed/skipped), reason, logged_offline |
 | `vitals_logs` | patient_id, type (bp/glucose/pulse), value_primary, value_secondary, meal_context, band (normal/borderline/critical), raw_transcript, recorded_at |
 | `prescriptions` | patient_id, image_url, doctor_name, raw_extracted_json, confidence, verified_at |
-| `emergency_contacts` | patient_id, name, phone, relationship, is_primary, notify_sms, notify_call |
+| `emergency_contacts` | patient_id, name, phone, relationship, is_primary, notify_call |
 | `devices` | user_id, fcm_token, platform, last_seen |
 | `report_shares` | patient_id, token_hash, expires_at, scope, views_count |
 | `voice_notes` | from_user, to_patient, audio_url, attached_medication_id |
@@ -177,7 +178,7 @@ erDiagram
 
 | Method | Endpoint | الوصف |
 |---|---|---|
-| POST | `/auth/otp/request` · `/auth/otp/verify` · `/auth/refresh` | تسجيل الدخول |
+| GET/PATCH | `/me` | قراءة وتحديث ملف Supabase Auth |
 | POST | `/caregiver/pair` · GET `/caregiver/patients` | الربط |
 | CRUD | `/medications` · `/schedules` | الأدوية والمواعيد |
 | POST | `/adherence/log` | تسجيل جرعة + خصم المخزون + بث WS |
@@ -203,7 +204,7 @@ erDiagram
 ## 7. هيكل المستودع (Monorepo)
 
 ```
-careelder/
+medliva/
 ├── apps/
 │   ├── mobile/                 # Flutter
 │   │   └── lib/
@@ -247,12 +248,12 @@ careelder/
 |---|---|---|
 | **0. التحليل والتخطيط** | أسبوع 1 | SRS، Use Cases، UML (Use Case / Sequence / Class)، Personas |
 | **1. التصميم UX/UI** | أسبوع 2–3 | Wireframes + Figma Hi-Fi (وضع المريض المبسّط + وضع المرافق)، Design System بتباين عالي، اختبار مع 3–5 كبار سن |
-| **2. الأساسات** | أسبوع 3–4 | Monorepo، إعداد Supabase، DB schema + Alembic، Auth OTP/JWT، CI، هيكل Flutter + Theme + Localization |
+| **2. الأساسات** | أسبوع 3–4 | Monorepo، إعداد Supabase، DB schema + Alembic، Supabase Auth بالبريد وكلمة المرور، CI، Flutter + Theme + Localization |
 | **3. MVP الأدوية والمنبه** ⭐ | أسبوع 5–7 | CRUD أدوية/مواعيد، Drift DB، المنبه الصارم Full-Screen، Boot Recovery، TTS، تسجيل الجرعة Offline + Sync |
 | **4. المرافق والتصعيد** | أسبوع 7–8 | Pairing، Dashboard لحظي (WS)، FCM، Supabase Cron watcher، سلم التصعيد، الرسائل الصوتية |
 | **5. طبقة الذكاء الاصطناعي** | أسبوع 9–11 | مسح الروشتة + بطاقة التأكيد، قاعدة أدوية مصرية، القياسات الصوتية بالعامية + Rule Engine للفرز |
 | **6. المخزون والتقارير** | أسبوع 11–12 | توقع النفاد، تنبيه 5 أيام، طلب WhatsApp، الصلاحية، PDF عربي، QR + بوابة الطبيب |
-| **7. SOS والأمان** | أسبوع 13 | زر الاستغاثة + GPS + Twilio، تشفير، Rate limiting، Audit logs |
+| **7. SOS والأمان** | أسبوع 13 | زر الاستغاثة + GPS وجهات الاتصال، تشفير، Rate limiting، Audit logs |
 | **8. الاختبار والتحسين** | أسبوع 14–15 | Unit/Integration/E2E، اختبار ميداني (Pilot) مع عائلات، إصلاحات، أداء وبطارية |
 | **9. التسليم** | أسبوع 16 | Deploy، APK موقّع، توثيق، فيديو Demo، عرض المناقشة والبحث |
 

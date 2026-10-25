@@ -3,21 +3,23 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_prescription_ocr_and_doctor_reports(client: AsyncClient):
-    # Register patient
-    p_req = await client.post("/api/v1/auth/otp/request", json={"phone": "01077778888"})
-    p_code = p_req.json()["dev_code"]
-    p_auth = await client.post(
-        "/api/v1/auth/otp/verify",
-        json={"phone": "01077778888", "code": p_code, "name": "مريض التقارير"},
-    )
-    p_token = p_auth.json()["access_token"]
-    patient_id = p_auth.json()["user"]["id"]
-    headers = {"Authorization": f"Bearer {p_token}"}
+async def test_prescription_ocr_and_doctor_reports(client: AsyncClient, user_factory):
+    patient = await user_factory(phone="+201077778888", name="مريض التقارير")
+    patient_id = str(patient.id)
+    headers = {"Authorization": f"Bearer {patient.id}"}
 
-
-    # 1. Test Prescription Scan endpoint
+    # 1. Test Prescription Scan endpoint: without a prescription the service
+    # never invents a medication.
     scan_res = await client.post("/api/v1/ai/scan-prescription", headers=headers)
+    assert scan_res.status_code == 200
+    scan_data = scan_res.json()
+    assert scan_data["medications"] == []
+    assert scan_data["confidence"] == 0.0
+    assert scan_data["source"] == "text"
+
+    # With a real prescription text the drugs are extracted.
+    files = {"file": ("rx.txt", b"Glucophage 500mg", "text/plain")}
+    scan_res = await client.post("/api/v1/ai/scan-prescription", headers=headers, files=files)
     assert scan_res.status_code == 200
     scan_data = scan_res.json()
     assert len(scan_data["medications"]) >= 1
@@ -50,3 +52,26 @@ async def test_prescription_ocr_and_doctor_reports(client: AsyncClient):
     )
     assert sos_res.status_code == 200
     assert sos_res.json()["status"] == "active"
+
+    # 4. Test authenticated report summary + access control (other users get 403)
+    summary_res = await client.get(
+        f"/api/v1/patients/{patient_id}/reports/summary",
+        headers=headers,
+    )
+    assert summary_res.status_code == 200
+    summary_data = summary_res.json()
+    assert summary_data["patient_id"] == patient_id
+    assert "adherence_rate_pct" in summary_data
+    assert "active_medications" in summary_data
+    assert "adherence_history" in summary_data
+    assert "vitals_history" in summary_data
+
+    # An unrelated account must be denied.
+    unrelated_user = await user_factory(phone="+201055554444", name="مستخدم آخر")
+    u2_headers = {"Authorization": f"Bearer {unrelated_user.id}"}
+
+    forbidden_res = await client.get(
+        f"/api/v1/patients/{patient_id}/reports/summary",
+        headers=u2_headers,
+    )
+    assert forbidden_res.status_code == 403

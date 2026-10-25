@@ -1,19 +1,30 @@
 import random
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import check_patient_access, get_current_user
 from app.core.errors import AppError
 from app.db.session import get_db
 from app.models.caregiver import CaregiverLink, CaregiverLinkStatus
 from app.models.user import User, UserRole
-from app.schemas.caregiver import LinkedPatientOut, PairCaregiverRequest, PairingCodeResponse
+from app.schemas.caregiver import (
+    LinkedCaregiverOut,
+    LinkedPatientOut,
+    MissedDoseAlertOut,
+    PairCaregiverRequest,
+    PairingCodeResponse,
+)
+from app.services.adherence_service import compute_patient_adherence_and_alerts
 
 router = APIRouter(prefix="/caregiver", tags=["caregiver"])
+
+# Patient scoped caregiver routes (the /caregiver prefix does not apply).
+patient_router = APIRouter(tags=["caregiver"])
 
 
 @router.post("/pairing-code", response_model=PairingCodeResponse)
@@ -75,7 +86,6 @@ async def pair_caregiver_with_patient(
     if not link or not exp or exp < now:
         raise AppError(400, "INVALID_CODE", "رمز الاقتران غير صحيح أو منتهي الصلاحية")
 
-
     if link.patient_id == current_user.id:
         raise AppError(400, "CANNOT_PAIR_SELF", "لا يمكنك الاقتران بنفسك")
 
@@ -98,11 +108,40 @@ async def pair_caregiver_with_patient(
     )
 
 
+async def _compute_patient_adherence_and_alerts(
+    patient_id: uuid.UUID,
+    db: AsyncSession,
+    now_utc: datetime,
+) -> tuple[int, int, list[MissedDoseAlertOut]]:
+    taken_count, _, missed_doses = await compute_patient_adherence_and_alerts(
+        patient_id, db, now_utc
+    )
+    return (
+        taken_count,
+        len(missed_doses),
+        [
+            MissedDoseAlertOut(
+                schedule_id=dose.schedule_id,
+                medication_id=dose.medication_id,
+                medication_name=dose.medication_name,
+                time_of_day=dose.time_of_day,
+                scheduled_time=dose.scheduled_time,
+            )
+            for dose in missed_doses
+        ],
+    )
+
+
 @router.get("/patients", response_model=list[LinkedPatientOut])
 async def list_linked_patients(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    now: Annotated[datetime | None, Query()] = None,
 ) -> list[LinkedPatientOut]:
+    ref_now = now or datetime.now(UTC)
+    if ref_now.tzinfo is None:
+        ref_now = ref_now.replace(tzinfo=UTC)
+
     stmt = (
         select(CaregiverLink, User)
         .join(User, CaregiverLink.patient_id == User.id)
@@ -116,6 +155,9 @@ async def list_linked_patients(
 
     output = []
     for link, patient in rows:
+        taken_cnt, missed_cnt, missed_doses = await _compute_patient_adherence_and_alerts(
+            patient.id, db, ref_now
+        )
         output.append(
             LinkedPatientOut(
                 patient_id=patient.id,
@@ -123,6 +165,58 @@ async def list_linked_patients(
                 phone=patient.phone,
                 status=link.status.value,
                 linked_at=link.linked_at,
+                today_taken_count=taken_cnt,
+                today_missed_count=missed_cnt,
+                active_alerts_count=missed_cnt,
+                missed_doses=missed_doses,
             )
         )
     return output
+
+
+@router.get("/alerts", response_model=list[MissedDoseAlertOut])
+async def list_caregiver_alerts(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    now: Annotated[datetime | None, Query()] = None,
+) -> list[MissedDoseAlertOut]:
+    patients = await list_linked_patients(current_user=current_user, db=db, now=now)
+    alerts: list[MissedDoseAlertOut] = []
+    for p in patients:
+        alerts.extend(p.missed_doses)
+    return alerts
+
+
+@patient_router.get(
+    "/patients/{patient_id}/caregivers",
+    response_model=list[LinkedCaregiverOut],
+)
+async def list_patient_caregivers(
+    patient_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> list[LinkedCaregiverOut]:
+    """The caregivers monitoring a patient (patient side view)."""
+    await check_patient_access(patient_id, current_user, db)
+
+    stmt = (
+        select(CaregiverLink, User)
+        .join(User, CaregiverLink.caregiver_id == User.id)
+        .where(
+            CaregiverLink.patient_id == patient_id,
+            CaregiverLink.status == CaregiverLinkStatus.ACTIVE,
+        )
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    return [
+        LinkedCaregiverOut(
+            caregiver_id=caregiver.id,
+            name=caregiver.name,
+            phone=caregiver.phone,
+            status=link.status.value,
+            linked_at=link.linked_at,
+        )
+        for link, caregiver in rows
+    ]

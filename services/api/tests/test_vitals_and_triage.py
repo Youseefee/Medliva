@@ -60,18 +60,10 @@ def test_egyptian_arabic_voice_vitals_parsing():
 
 
 @pytest.mark.asyncio
-async def test_vitals_api_endpoints(client: AsyncClient):
-    # Register/login patient
-    req = await client.post("/api/v1/auth/otp/request", json={"phone": "01011112222"})
-    code = req.json()["dev_code"]
-    v_res = await client.post(
-        "/api/v1/auth/otp/verify",
-        json={"phone": "01011112222", "code": code, "name": "مريض تجريبي"},
-    )
-    access_token = v_res.json()["access_token"]
-    patient_id = v_res.json()["user"]["id"]
-    headers = {"Authorization": f"Bearer {access_token}"}
-
+async def test_vitals_api_endpoints(client: AsyncClient, user_factory):
+    patient = await user_factory(phone="+201011112222", name="مريض تجريبي")
+    patient_id = str(patient.id)
+    headers = {"Authorization": f"Bearer {patient.id}"}
 
     # 1. Parse voice vitals
     voice_res = await client.post(

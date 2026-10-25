@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-CareElder - 5-Page Concise, Dense, Minimalist Engineering Specifications (Arabic)
+Medliva - 5-Page Concise, Dense, Minimalist Engineering Specifications (Arabic)
 Design Specifications:
 - No large empty spaces: Each page is fully and evenly populated.
 - Concise, sharp, direct text without repetition.
@@ -8,7 +8,7 @@ Design Specifications:
 - Font: Alexandria (Clean Geometric Kufi).
 - Minimalist Black & White / Grayscale.
 - No headers or footers.
-Output: CareElder_UseCases_and_Features_AR.pdf (Exactly 5 full pages)
+Output: Medliva_UseCases_and_Features_AR.pdf (Exactly 5 full pages)
 """
 
 import os
@@ -16,8 +16,8 @@ import subprocess
 import pypdf
 
 WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "original"))
-HTML_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_AR.html")
-PDF_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_AR.pdf")
+HTML_FILE = os.path.join(WORKSPACE, "Medliva_UseCases_and_Features_AR.html")
+PDF_FILE = os.path.join(WORKSPACE, "Medliva_UseCases_and_Features_AR.pdf")
 
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 if not os.path.exists(CHROME_PATH):
@@ -28,7 +28,7 @@ def build_arabic_html():
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>وثيقة المواصفات الهندسية وحالات الاستخدام - رفيق العافية (CareElder)</title>
+<title>وثيقة المواصفات الهندسية وحالات الاستخدام - رفيق العافية (Medliva)</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800;900&display=swap');
 
@@ -258,7 +258,7 @@ ul.bullet-list li {
       <span class="tag-clean" style="font-size: 8pt; padding: 3px 8px;">وثيقة المواصفات الهندسية وحالات الاستخدام</span>
       <span style="font-size: 8.2pt; font-weight: 700; color: #444;">نظام رعاية كبار السن المتقدم | 2026</span>
     </div>
-    <h1 style="font-size: 23pt; font-weight: 900; color: #000; line-height: 1.15; margin-bottom: 4px;">رفيق العافية (CareElder)</h1>
+    <h1 style="font-size: 23pt; font-weight: 900; color: #000; line-height: 1.15; margin-bottom: 4px;">رفيق العافية (Medliva)</h1>
     <h2 style="font-size: 11pt; font-weight: 700; color: #333; margin-bottom: 8px;">منظومة الرعاية الصحية الذكية ومتابعة الالتزام الدوائي والرصد السريري لكبار السن</h2>
     <p style="font-size: 9.1pt; color: #222; line-height: 1.55;">
       منظومة رقمية وقائية متكاملة تربط المريض المسن، المرافق العائلي، والطبيب المعالج. تعتمد معمارية <strong>"العمل المستقل دون اتصال" (Offline-First)</strong> لضمان انطلاق التنبيهات الدوائية بدقة عتادية صارمة، مع واجهات مصممة خصيصاً للخصائص البصرية والحركية لكبار السن بدون كتابة نهائياً (Zero Typing)، ومسح الروشتات بالرؤية الحاسوبية، وتتبع استهلاك الأدوية وإصدار التقارير السريرية.
@@ -366,14 +366,14 @@ ul.bullet-list li {
 
   <div class="box">
     <div class="box-header">
-      <span>المقارنة التحليلية: الوضع التقليدي مقابل ابتكار CareElder</span>
+      <span>المقارنة التحليلية: الوضع التقليدي مقابل ابتكار Medliva</span>
     </div>
     <table class="table-clean">
       <thead>
         <tr>
           <th style="width: 22%;">المحور الهندسي</th>
           <th style="width: 39%;">التطبيقات التجارية والوضع الراهن</th>
-          <th style="width: 39%;">منظومة CareElder المتكاملة</th>
+          <th style="width: 39%;">منظومة Medliva المتكاملة</th>
         </tr>
       </thead>
       <tbody>
@@ -403,7 +403,7 @@ ul.bullet-list li {
 
   <div class="box">
     <div class="box-header">
-      <span>ركائز الحل الخمسة لمنصة CareElder</span>
+      <span>ركائز الحل الخمسة لمنصة Medliva</span>
     </div>
     <div class="grid-3" style="font-size: 8.4pt;">
       <div style="border: 1px solid var(--border-light); padding: 6px;">
@@ -428,7 +428,7 @@ ul.bullet-list li {
 
   <div class="box">
     <div class="box-header">
-      <span>التدفق التشغيلي لدورة حياة الرعاية في CareElder</span>
+      <span>التدفق التشغيلي لدورة حياة الرعاية في Medliva</span>
     </div>
     <table class="table-clean" style="text-align: center;">
       <thead>

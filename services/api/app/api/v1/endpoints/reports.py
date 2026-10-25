@@ -1,10 +1,10 @@
 import hashlib
 import secrets
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,7 +15,12 @@ from app.models.medication import IntakeLog, IntakeStatus, Medication, Schedule
 from app.models.reports import ReportShare
 from app.models.user import User
 from app.models.vitals import VitalsLog
-from app.schemas.reports import PublicReportOut, ReportShareCreate, ReportShareOut
+from app.schemas.reports import (
+    PublicReportOut,
+    ReportShareCreate,
+    ReportShareOut,
+    ReportSummaryOut,
+)
 
 router = APIRouter(tags=["reports"])
 
@@ -100,13 +105,15 @@ async def get_public_report(
         s_stmt = select(Schedule).where(Schedule.medication_id == med.id)
         s_res = await db.execute(s_stmt)
         scheds = s_res.scalars().all()
-        meds_list.append({
-            "name": med.name,
-            "dose_form": med.form,
-            "strength": med.strength,
-            "stock_count": med.stock_count,
-            "times": [s.time_of_day.strftime("%H:%M") for s in scheds],
-        })
+        meds_list.append(
+            {
+                "name": med.name,
+                "dose_form": med.form,
+                "strength": med.strength,
+                "stock_count": med.stock_count,
+                "times": [s.time_of_day.strftime("%H:%M") for s in scheds],
+            }
+        )
 
     # Fetch last 30 days intake logs
     thirty_days_ago = now - timedelta(days=30)
@@ -159,7 +166,7 @@ async def get_public_report(
     ]
 
     return PublicReportOut(
-        patient_name=patient.name or "مريض CareElder",
+        patient_name=patient.name or "مريض Medliva",
         patient_phone=patient.phone,
         adherence_rate_pct=adherence_pct,
         total_doses=total_doses,
@@ -168,4 +175,122 @@ async def get_public_report(
         active_medications=meds_list,
         recent_vitals=vitals_list,
         recent_intake_logs=recent_logs_list,
+    )
+
+
+@router.get("/patients/{patient_id}/reports/summary", response_model=ReportSummaryOut)
+async def get_patient_report_summary(
+    patient_id: uuid.UUID,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    from_date: Annotated[date | None, Query(alias="from")] = None,
+    to_date: Annotated[date | None, Query(alias="to")] = None,
+) -> ReportSummaryOut:
+    await check_patient_access(patient_id, current_user, db)
+
+    patient = await db.get(User, patient_id)
+    if not patient:
+        raise AppError(404, "PATIENT_NOT_FOUND", "المريض غير موجود")
+
+    end_d = to_date or datetime.now(UTC).date()
+    start_d = from_date or (end_d - timedelta(days=30))
+    start_dt = datetime.combine(start_d, time.min).replace(tzinfo=UTC)
+    end_dt = datetime.combine(end_d, time.max).replace(tzinfo=UTC)
+
+    med_stmt = select(Medication).where(
+        Medication.patient_id == patient.id,
+        Medication.is_active == True,  # noqa: E712
+    )
+    med_res = await db.execute(med_stmt)
+    medications = med_res.scalars().all()
+    med_by_id = {m.id: m for m in medications}
+
+    meds_list = []
+    sched_to_med_name: dict[uuid.UUID, str] = {}
+    for med in medications:
+        s_stmt = select(Schedule).where(Schedule.medication_id == med.id)
+        s_res = await db.execute(s_stmt)
+        scheds = s_res.scalars().all()
+        for s in scheds:
+            sched_to_med_name[s.id] = med.name
+        meds_list.append(
+            {
+                "id": str(med.id),
+                "name": med.name,
+                "dose_form": med.form,
+                "strength": med.strength,
+                "stock_count": med.stock_count,
+                "times": [s.time_of_day.strftime("%H:%M") for s in scheds],
+            }
+        )
+
+    intake_stmt = (
+        select(IntakeLog)
+        .where(
+            IntakeLog.patient_id == patient.id,
+            IntakeLog.scheduled_time >= start_dt,
+            IntakeLog.scheduled_time <= end_dt,
+        )
+        .order_by(IntakeLog.scheduled_time.desc())
+    )
+    intake_res = await db.execute(intake_stmt)
+    intake_logs = intake_res.scalars().all()
+
+    total_doses = len(intake_logs)
+    taken_doses = sum(1 for log in intake_logs if log.status == IntakeStatus.TAKEN)
+    skipped_doses = sum(1 for log in intake_logs if log.status == IntakeStatus.SKIPPED)
+    missed_doses = sum(1 for log in intake_logs if log.status == IntakeStatus.MISSED)
+    adherence_pct = round((taken_doses / total_doses * 100), 1) if total_doses > 0 else 100.0
+
+    adherence_history = [
+        {
+            "schedule_id": str(log.schedule_id),
+            "medication_name": sched_to_med_name.get(log.schedule_id, ""),
+            "scheduled_time": log.scheduled_time.isoformat(),
+            "actual_time": log.actual_time.isoformat() if log.actual_time else None,
+            "status": log.status.value,
+            "reason": log.reason,
+        }
+        for log in intake_logs
+    ]
+
+    vitals_stmt = (
+        select(VitalsLog)
+        .where(
+            VitalsLog.patient_id == patient.id,
+            VitalsLog.recorded_at >= start_dt,
+            VitalsLog.recorded_at <= end_dt,
+        )
+        .order_by(VitalsLog.recorded_at.desc())
+    )
+    vitals_res = await db.execute(vitals_stmt)
+    vitals = vitals_res.scalars().all()
+
+    vitals_history = [
+        {
+            "type": v.type.value,
+            "value_primary": v.value_primary,
+            "value_secondary": v.value_secondary,
+            "meal_context": v.meal_context,
+            "band": v.band.value,
+            "recorded_at": v.recorded_at.isoformat(),
+        }
+        for v in vitals
+    ]
+
+    _ = med_by_id
+    return ReportSummaryOut(
+        patient_id=str(patient.id),
+        patient_name=patient.name or "مريض Medliva",
+        patient_phone=patient.phone,
+        from_date=start_d.isoformat(),
+        to_date=end_d.isoformat(),
+        adherence_rate_pct=adherence_pct,
+        total_doses=total_doses,
+        taken_doses=taken_doses,
+        skipped_doses=skipped_doses,
+        missed_doses_count=missed_doses,
+        active_medications=meds_list,
+        adherence_history=adherence_history,
+        vitals_history=vitals_history,
     )

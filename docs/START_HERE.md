@@ -1,4 +1,4 @@
-# CareElder — Start Here
+# Medliva — Start Here
 
 ## قراءة سريعة للإيجنت
 
@@ -11,17 +11,18 @@
 
 | الجزء | الحالة الفعلية من الكود |
 |---|---|
-| `services/api` | FastAPI يعمل ويضم auth/users، caregiver، medications/adherence، vitals، AI، inventory، emergency، reports، وdevices مع اختبارات API. |
-| `apps/mobile` | Flutter يضم البنية الأساسية، تسجيل الهاتف/OTP، الجلسة، التوجيه، الترجمة، والشاشة الرئيسية؛ تكامل ميزات الأدوية والمرافق غير ظاهر في الواجهة الحالية بعد. |
-| `apps/doctor-portal` | غير منفّذ بعد؛ الموجود README يحدد النطاق المقترح فقط. |
-| `docs/` | بعض الملفات مواصفات وخطط مستقبلية، وليست سجل تنفيذ. |
+| `services/api` | FastAPI يتحقق من جلسات Supabase Auth ويزامن ملف المستخدم، ويضم caregiver (بما في ذلك تصعيد الجرعات الفائتة بعد 15 دقيقة)، medications/adherence، vitals، AI (قراءة صورة الروشتة عبر Gemini Vision اختيارياً مع بديل نصي، بدون اختلاق أي دواء)، inventory، emergency (SOS + جهات الاتصال + `GET /patients/{id}/alerts`)، reports (ملخص تقرير الطبيب + رابط مشاركة + PDF بخط عربي)، وdevices. |
+| `apps/mobile` | تطبيق Flutter يستخدم البريد وكلمة المرور عبر Supabase Auth، بلا دخول بالهاتف أو SMS/OTP. يشمل التوجيه حسب الدور (`/patient` و`/caregiver`)، الملف الشخصي واللغة، الأدوية وجرعات اليوم والتنبيهات المحلية (مربوطة فعلياً بجرعات اليوم) وطابور عدم الاتصال، ربط المرافق ولوحة المتابعة، القياسات الحيوية والإدخال الصوتي، مسح الروشتة، الطوارئ وزر SOS، المخزون وإعادة الطلب، مركز الإشعارات المبني على تغذية التنبيهات الحقيقية، وتقرير الطبيب PDF داخل التطبيق. |
+| `apps/doctor-portal` | استُبدلت البوابة المستقلة في الـ MVP بميزة توليد ومشاركة تقرير الطبيب بصيغة PDF مباشرة داخل تطبيق الموبايل (`DoctorReportScreen`). |
+| `docs/` | محدّثة ومتزامنة مع التنفيذ الفعلي (`API_SPEC.md` و`EXECUTION_PLAN.md`). |
+| `scripts/` | `services/api/scripts/seed_demo_data.py` يزرع بيانات عرض قابلة للتكرار (كتالوج الأدوية + سجل مريض تجريبي). |
 
 ## خريطة الملفات المهمة
 
 | لو بتشتغل على | ابدأ من | ثم راجع |
 |---|---|---|
 | Backend endpoint | `services/api/app/api/v1/endpoints/` | `schemas/`, `models/`, `tests/`, `docs/API_SPEC.md` |
-| Auth/security | `services/api/app/api/v1/endpoints/auth.py` | `core/security.py`, `core/deps.py`, `tests/test_auth.py`, `docs/SECURITY.md` |
+| Auth/security | `apps/mobile/lib/features/auth/` | `services/api/app/core/deps.py`, `tests/test_auth.py`, `docs/SECURITY.md` |
 | Medication/adherence | `services/api/app/api/v1/endpoints/medications.py` | `adherence.py`, `models/medication.py`, related tests |
 | Flutter screen/flow | `apps/mobile/lib/features/` | `core/router/`, `core/network/`, `lib/l10n/`, `test/` |
 | Architecture/data | `docs/ARCHITECTURE.md` | `docs/DATABASE.md`, `docs/API_SPEC.md` |

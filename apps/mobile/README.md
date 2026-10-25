@@ -1,22 +1,22 @@
-# 📱 CareElder Mobile (Flutter)
+# 📱 Medliva Mobile (Flutter)
 
-تطبيق الموبايل لمشروع **CareElder** (رعاية ذكية لكبار السن ومتابعة عائلية).
+تطبيق الموبايل لمشروع **Medliva** (رعاية ذكية لكبار السن ومتابعة عائلية).
 
 ## 🏗️ المعمارية الحالية (Clean Architecture)
 ```
 lib/
 ├── core/
 │   ├── config/      # AppConfig (API_BASE_URL via --dart-define)
-│   ├── network/     # ApiClient (Dio + Token Interceptor + Auto Refresh on 401)
-│   ├── router/      # GoRouter (Auth redirection + Splash/Login/OTP/Home)
-│   ├── storage/     # TokenStorage (flutter_secure_storage)
+│   ├── network/     # ApiClient (Dio + Supabase session interceptor)
+│   ├── router/      # GoRouter (Auth redirection + Splash/Login/Home)
+│   ├── storage/     # TokenStorage wrapper around the Supabase Auth session
 │   ├── theme/       # AppTheme (Accessible, Cairo Font, High Contrast, Large Buttons)
 │   └── utils/       # PhoneValidator (Egyptian phone normalization)
 ├── features/
 │   ├── auth/
 │   │   ├── data/            # AuthRepository
 │   │   ├── domain/models/   # UserModel
-│   │   └── presentation/    # AuthNotifier (Riverpod) + PhoneScreen + OtpScreen
+│   │   └── presentation/    # AuthNotifier (Riverpod) + email/password screen
 │   └── home/
 │       └── presentation/    # HomeScreen (Welcome + User Role + Logout)
 ├── l10n/                    # AppLocalizations (ar/en) - العربية افتراضية RTL
@@ -26,8 +26,8 @@ lib/
 ## 📦 الحزم المستخدمة (Sprint 2)
 - `flutter_riverpod`: إدارة الحالة بالـ Notifiers بدون Code Generation.
 - `go_router`: التوجيه والتحويل التلقائي حسب حالة تسجيل الدخول.
-- `dio`: التعامل مع الـ API والتجديد التلقائي لرمز الدخول (JWT Token Refresh).
-- `flutter_secure_storage`: التخزين الآمن لمفاتيح الجلسة.
+- `supabase_flutter`: تسجيل البريد وكلمة المرور، وإدارة جلسة الدخول وتجديدها.
+- `dio`: التعامل مع FastAPI وإرسال Access Token الصادر من Supabase Auth.
 - `google_fonts`: خط القاهرة (Cairo) لسهولة القراءة لكبار السن.
 - `intl` & `flutter_localizations`: دعم كامل للغتين العربية والإنجليزية.
 
@@ -43,6 +43,8 @@ flutter run
 ```bash
 flutter run --dart-define=API_BASE_URL=http://<YOUR_LOCAL_IP>:8000/api/v1
 ```
+
+يمكن تبديل المشروع ومفتاحه العام عند البناء باستخدام `SUPABASE_URL` و`SUPABASE_PUBLISHABLE_KEY` عبر `--dart-define`. التطبيق يستخدم مفتاحاً عاماً فقط؛ لا تضع مفتاح `service_role` داخل تطبيق الموبايل.
 
 ### الاختبار والتحليل:
 ```bash

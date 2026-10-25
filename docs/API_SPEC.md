@@ -2,7 +2,7 @@
 
 - **Base URL:** `/api/v1` (باستثناء `/health` على الجذر `/`)
 - **Format:** JSON (`multipart/form-data` لرفع صورة الروشتة)
-- **Auth:** `Authorization: Bearer <access_token>`
+- **Auth:** Supabase Auth manages sign-in and sessions; protected API requests use `Authorization: Bearer <Supabase access token>`.
 - **Errors:** `{ "error": { "code": "STRING", "message": "..." } }`
 - **Swagger / OpenAPI:** متاح في بيئة التطوير على `/docs` و`/redoc`.
 
@@ -11,15 +11,12 @@
 | Method | Path | Auth / الصلاحية | Request Schema | Response Schema | الوصف |
 |---|---|---|---|---|---|
 | `GET` | `/health` | Public | — | `dict[str, str]` | فحص حالة الخادم (موجود على الجذر خارج `/api/v1`) |
-| `POST` | `/auth/otp/request` | Public | `OtpRequestIn` | `OtpRequestOut` | طلب إرسال رمز التحقق OTP لرقم هاتف مصري |
-| `POST` | `/auth/otp/verify` | Public | `OtpVerifyIn` | `AuthTokensOut` | التحقق من الرمز وإصدار `access_token` و`refresh_token` وبيانات `UserOut` |
-| `POST` | `/auth/refresh` | Public | `TokenRefreshIn` | `TokenRefreshOut` | تدوير رمز التجديد وإصدار زوج توكنات جديد |
-| `POST` | `/auth/logout` | Public | `TokenRefreshIn` | `204 No Content` | إبطال جلسة التجديد الحالية |
-| `GET` | `/me` | Auth | — | `UserOut` | جلب بيانات المستخدم الحالي |
-| `PATCH` | `/me` | Auth | `UserUpdateIn` | `UserOut` | تحديث بيانات المستخدم الحالي (الاسم، اللغة، المنطقة الزمنية، تاريخ الميلاد، العنوان) |
+| `GET` | `/me` | Supabase Auth | — | `UserOut` | جلب ملف المستخدم المرتبط بمعرّف Supabase الحالي |
+| `PATCH` | `/me` | Supabase Auth | `UserUpdateIn` | `UserOut` | تحديث بيانات المستخدم الحالي (الاسم، اللغة، المنطقة الزمنية، تاريخ الميلاد، العنوان) |
 | `POST` | `/caregiver/pairing-code` | Patient | — | `PairingCodeResponse` | توليد كود اقتران من 6 أرقام صالح لمدة 10 دقائق |
 | `POST` | `/caregiver/pair` | Caregiver | `PairCaregiverRequest` | `LinkedPatientOut` | ربط حساب المرافق بالمريض عبر كود الاقتران |
-| `GET` | `/caregiver/patients` | Caregiver | — | `list[LinkedPatientOut]` | قائمة المرضى المرتبطين بالمرافق الحالي |
+| `GET` | `/caregiver/patients` | Caregiver | — | `list[LinkedPatientOut]` | قائمة المرضى المرتبطين بالمرافق الحالي مع إحصاءات التناول/التفويت وتنبيهات الـ 15 دقيقة |
+| `GET` | `/caregiver/alerts` | Caregiver | — | `list[MissedDoseAlertOut]` | جلب تنبيهات الجرعات الفائتة (بعد 15 دقيقة بدون تسجيل) للمرضى المرتبطين |
 | `GET` | `/patients/{patient_id}/medications` | Patient / Linked Caregiver | — | `list[MedicationOut]` | قائمة الأدوية النشطة للمريض مع مواعيدها |
 | `POST` | `/patients/{patient_id}/medications` | Patient / Linked Caregiver | `MedicationCreate` | `MedicationOut` (`201`) | إضافة دواء جديد للمريض مع جدول مواعيده الاختياري |
 | `PATCH` | `/medications/{medication_id}` | Patient / Linked Caregiver | `MedicationUpdate` | `MedicationOut` | تعديل بيانات الدواء أو مخزونه أو حالته |
@@ -38,7 +35,10 @@
 | `POST` | `/emergency/sos` | Auth | `SosRequest` | `SosResponse` | إطلاق نداء استغاثة عاجل (SOS) مع الموقع الجغرافي الاختياري وإشعار جهات الاتصال والمرافقين |
 | `GET` | `/patients/{patient_id}/contacts` | Patient / Linked Caregiver | — | `list[EmergencyContactOut]` | جلب قائمة جهات اتصال الطوارئ الخاصة بالمريض |
 | `POST` | `/patients/{patient_id}/contacts` | Patient / Linked Caregiver | `EmergencyContactCreate` | `EmergencyContactOut` (`201`) | إضافة جهة اتصال طوارئ جديدة للمريض |
+| `GET` | `/patients/{patient_id}/alerts` | Patient / Linked Caregiver | Query: `limit` (1-200, افتراضي 50), `now` | `list[AlertOut]` | جلب أحدث تنبيهات المريض (`sos`, `critical_vital`, `low_stock`, `missed_dose`) مرتبة من الأحدث للأقدم؛ الجرعات الفائتة تُحسب من جدول اليوم وقاعدة الـ 15 دقيقة |
+| `GET` | `/patients/{patient_id}/caregivers` | Patient / Linked Caregiver | — | `list[LinkedCaregiverOut]` | جلب المرافقين الذين يراقبون حالة المريض (منظور المريض) |
 | `POST` | `/patients/{patient_id}/reports/share` | Patient / Linked Caregiver | `ReportShareCreate` | `ReportShareOut` | إنشاء رابط مشاركة مؤقت لتقرير المريض الطبي |
+| `GET` | `/patients/{patient_id}/reports/summary` | Patient / Linked Caregiver | Query: `from`, `to` | `ReportSummaryOut` | جلب بيانات التقرير الطبي الكامل للمريض (الأدوية، الالتزام، القياسات الحيوية) لبناء ملف PDF داخل التطبيق |
 | `GET` | `/public/reports/{token}` | Public Token | — | `PublicReportOut` | عرض التقرير الطبي العام للمريض عبر رمز المشاركة الصالح |
 | `POST` | `/devices` | Auth | `DeviceRegisterRequest` | `dict[str, str]` | تسجيل أو تحديث رمز إشعارات الجهاز (`fcm_token`) |
 
@@ -71,9 +71,12 @@
       "confidence_score": 0.96
     }
   ],
-  "confidence": 0.96
+  "confidence": 0.96,
+  "source": "gemini_vision"
 }
 ```
+- `source` = `gemini_vision` عندما تُقرأ الصورة عبر Gemini Vision (يتطلب `GEMINI_API_KEY`)، و`text` في حالة التحليل النصي.
+- عند عدم وجود أي دواء في الصورة/النص ترجع `medications: []` و`confidence: 0.0` — النظام لا يخترع الأدوية أبداً.
 
 **POST `/api/v1/ai/parse-voice-vitals`** (`VoiceVitalsRequest` → `VoiceVitalsResponse`)
 ```json

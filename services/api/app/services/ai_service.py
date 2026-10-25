@@ -302,25 +302,37 @@ def match_drug_in_catalog(
     return None, 0.0
 
 
-def scan_prescription_mock(text_or_hint: str = "") -> list[dict[str, Any]]:
-    # Simulated OCR extraction with intelligent fuzzy matching against Egyptian drug catalog
-    extracted = []
-    sample_items = [
-        ("Glucophage 500mg", 500, 2, "after_meal", ["08:30", "20:30"], 60),
-        ("Concor 5mg", 5, 1, "before_meal", ["08:00"], 30),
-    ]
+def scan_prescription_text(text_or_hint: str = "") -> list[dict[str, Any]]:
+    """Extract the medications that are actually present in a text hint.
 
-    for name_candidate, dose_mg, freq, meal, times, stock in sample_items:
-        match, conf = match_drug_in_catalog(name_candidate)
-        extracted.append({
-            "drug_trade_name": match["trade_name"] if match else name_candidate,
-            "dosage_mg": dose_mg,
-            "frequency_per_day": freq,
-            "meal_relation": meal,
-            "times": times,
-            "inventory_pills": stock,
-            "confidence_score": max(conf, 0.94),
-            "active_ingredient": match.get("active_ingredient") if match else None,
-        })
+    The text can come from an OCR layer, a file name or a manually typed
+    prescription. Nothing is invented: when no drug of the catalog matches, an
+    empty list is returned.
+    """
+    extracted: list[dict[str, Any]] = []
+
+    if not text_or_hint.strip():
+        return extracted
+
+    lines = [ln.strip() for ln in re.split(r"[\n,;]+", text_or_hint) if ln.strip()]
+    for ln in lines:
+        match, conf = match_drug_in_catalog(ln)
+        if not match:
+            continue
+        times = match.get("default_times", ["08:00"])
+        dose_digits = re.findall(r"\d+", match.get("strength", "5"))
+        dose_mg = int(dose_digits[0]) if dose_digits else 5
+        extracted.append(
+            {
+                "drug_trade_name": match["trade_name"],
+                "dosage_mg": dose_mg,
+                "frequency_per_day": len(times),
+                "meal_relation": match.get("meal_relation", "after_meal"),
+                "times": times,
+                "inventory_pills": 30,
+                "confidence_score": max(conf, 0.88),
+                "active_ingredient": match.get("active_ingredient"),
+            }
+        )
 
     return extracted

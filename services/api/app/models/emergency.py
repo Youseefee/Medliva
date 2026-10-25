@@ -26,7 +26,6 @@ class EmergencyContact(Base, IdTimestampMixin):
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
     relationship: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    notify_sms: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     notify_call: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -45,6 +44,4 @@ class Alert(Base, IdTimestampMixin):
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    acknowledged_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

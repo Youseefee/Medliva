@@ -1,25 +1,18 @@
 {
   "@@locale": "ar",
-  "appName": "كير إلدر",
+  "appName": "ميدليفا",
   "appTagline": "رعاية ذكية لكبار السن ومتابعة لحظية للأهل",
   "loginTitle": "تسجيل الدخول",
-  "loginSubtitle": "أدخل رقم هاتفك لتسجيل الدخول أو إنشاء حساب جديد",
+  "loginSubtitle": "سجّل الدخول أو أنشئ حساباً بالبريد الإلكتروني وكلمة المرور",
   "phoneLabel": "رقم الهاتف المحمول",
-  "phoneHint": "01012345678",
-  "sendOtpButton": "إرسال رمز التحقق",
-  "otpTitle": "تأكيد رقم الهاتف",
-  "otpSubtitle": "تم إرسال رمز مكون من 6 أرقام إلى الرقم {phone}",
-  "@otpSubtitle": {
-    "placeholders": {
-      "phone": {
-        "type": "String"
-      }
-    }
-  },
-  "otpLabel": "رمز التحقق",
-  "otpHint": "123456",
-  "verifyButton": "تأكيد ودخول",
-  "resendButton": "إعادة الإرسال",
+  "emailLabel": "البريد الإلكتروني",
+  "emailHint": "name@example.com",
+  "passwordLabel": "كلمة المرور",
+  "signInButton": "تسجيل الدخول",
+  "signUpButton": "إنشاء حساب",
+  "switchToSignUp": "ليس لديك حساب؟ أنشئ حساباً",
+  "switchToSignIn": "لديك حساب بالفعل؟ سجّل الدخول",
+  "confirmationEmailSent": "افتح رابط التأكيد المرسل إلى بريدك، ثم سجّل الدخول",
   "nameLabel": "الاسم بالكامل",
   "nameHint": "مثال: أحمد محمد",
   "roleLabel": "نوع الحساب",
@@ -44,5 +37,382 @@
   },
   "logoutButton": "تسجيل الخروج",
   "errorOccurred": "حدث خطأ ما",
-  "retry": "إعادة المحاولة"
+  "retry": "إعادة المحاولة",
+  "patientShellTitle": "واجهة المريض",
+  "caregiverShellTitle": "لوحة متابعة المرافق",
+  "profileTitle": "الملف الشخصي",
+  "languageLabel": "اللغة",
+  "languageArabic": "العربية",
+  "languageEnglish": "English",
+  "saveButton": "حفظ التغييرات",
+  "profileSaved": "تم حفظ التغييرات بنجاح",
+  "todayDosesTitle": "جرعات اليوم",
+  "noDosesToday": "لا توجد جرعات مجدولة لليوم",
+  "doseAmountLabel": "{amount} قرص",
+  "@doseAmountLabel": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "statusPending": "قيد الانتظار",
+  "statusTaken": "تم التناول",
+  "statusSkipped": "تم التخطي",
+  "statusMissed": "فائتة",
+  "statusSnoozed": "مؤجلة",
+  "takeDoseButton": "تناولت الدواء",
+  "skipDoseButton": "تخطي",
+  "medicationsTitle": "قائمة الأدوية",
+  "addMedicationTitle": "إضافة دواء",
+  "editMedicationTitle": "تعديل الدواء",
+  "deleteMedicationTitle": "حذف الدواء",
+  "deleteMedicationConfirm": "هل أنت متأكد من حذف هذا الدواء؟",
+  "deleteButton": "حذف",
+  "cancelButton": "إلغاء",
+  "medicationNameLabel": "اسم الدواء",
+  "medicationStrengthLabel": "التركيز (مثال: 5mg)",
+  "medicationFormLabel": "الشكل الدوائي",
+  "medicationStockLabel": "الكمية المتاحة (عدد الأقراص)",
+  "medicationNameRequired": "يرجى إدخال اسم الدواء",
+  "schedulesSectionTitle": "مواعيد الجرعات",
+  "addScheduleButton": "إضافة موعد",
+  "timeOfDayLabel": "الوقت (HH:MM)",
+  "mealBefore": "قبل الأكل",
+  "mealAfter": "بعد الأكل",
+  "mealWith": "مع الأكل",
+  "mealAnytime": "في أي وقت",
+  "noMedicationsYet": "لم يتم إضافة أدوية بعد",
+  "daysOfWeekLabel": "أيام الأسبوع",
+  "daySat": "السبت",
+  "daySun": "الأحد",
+  "dayMon": "الإثنين",
+  "dayTue": "الثلاثاء",
+  "dayWed": "الأربعاء",
+  "dayThu": "الخميس",
+  "dayFri": "الجمعة",
+  "pairingCodeTitle": "رمز ربط المرافق",
+  "pairingCodeSubtitle": "أعطِ هذا الرمز للمرافق لربط حسابه ومتابعة مواعيدك",
+  "generatePairingCodeButton": "توليد رمز جديد",
+  "pairPatientTitle": "ربط حساب مريض",
+  "pairPatientSubtitle": "أدخل الرمز المكون من 6 أرقام من تطبيق المريض",
+  "pairCodeInputLabel": "رمز الاقتران",
+  "pairSubmitButton": "ربط الحساب",
+  "pairSuccessMessage": "تم ربط حساب المريض بنجاح",
+  "noLinkedPatients": "لا يوجد مرضى مرتبطين بحسابك بعد",
+  "takenMissedSummary": "تم تناول {taken} • فائتة {missed}",
+  "@takenMissedSummary": {
+    "placeholders": {
+      "taken": {
+        "type": "int"
+      },
+      "missed": {
+        "type": "int"
+      }
+    }
+  },
+  "alertsBadgeLabel": "{count} تنبيه",
+  "@alertsBadgeLabel": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vitalsTitle": "القياسات الحيوية",
+  "vitalTypeBp": "ضغط الدم",
+  "vitalTypeGlucose": "السكر",
+  "vitalTypePulse": "النبض",
+  "vitalValuePrimaryLabel": "القراءة الأساسية",
+  "vitalValueSecondaryLabel": "القراءة الصغرى (للضغط)",
+  "addVitalButton": "تسجيل القراءة",
+  "triageNormal": "طبيعي",
+  "triageBorderline": "حدودي / يحتاج متابعة",
+  "triageCritical": "حرج / خطر",
+  "voiceVitalButton": "إدخال صوتي",
+  "voiceVitalConfirmTitle": "تأكيد القراءة الصوتية",
+  "confirmSaveButton": "تأكيد وحفظ",
+  "noVitalsRecorded": "لا توجد قياسات مسجلة بعد",
+  "scanPrescriptionTitle": "مسح الروشتة",
+  "pickFromCameraButton": "التقاط صورة بالكاميرا",
+  "pickFromGalleryButton": "اختيار من المعرض",
+  "confirmPrescriptionButton": "اعتماد وإضافة الأدوية",
+  "emergencyContactsTitle": "جهات اتصال الطوارئ",
+  "contactNameLabel": "اسم جهة الاتصال",
+  "contactRelationLabel": "صلة القرابة",
+  "addContactButton": "إضافة جهة اتصال",
+  "sosButtonLabel": "استغاثة طوارئ SOS",
+  "sosConfirmTitle": "تأكيد إرسال نداء استغاثة",
+  "sosConfirmBody": "هل تريد إرسال نداء استغاثة عاجل إلى عائلتك الآن؟",
+  "sosConfirmSendButton": "إرسال استغاثة الآن",
+  "sosSentMessage": "تم إرسال نداء الاستغاثة بنجاح",
+  "inventoryTitle": "مخزون الأدوية",
+  "daysLeftLabel": "متبقي {days} يوم",
+  "@daysLeftLabel": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "lowStockWarning": "تحذير: المخزون يكفي لأقل من 7 أيام",
+  "refillOrderButton": "طلب إعادة التعبئة",
+  "doctorReportTitle": "تقرير الطبيب (PDF)",
+  "shareReportButton": "مشاركة / طباعة التقرير",
+  "reportDisclaimer": "هذا التقرير صادر آلياً من تطبيق ميدليفا للمتابعة الطبية ولا يغني عن الاستشارة الطبية المباشرة.",
+  "emailRequiredError": "يرجى إدخال البريد الإلكتروني",
+  "emailInvalidError": "البريد الإلكتروني غير صحيح",
+  "passwordRequiredError": "يرجى إدخال كلمة المرور",
+  "passwordShortError": "كلمة المرور يجب ألا تقل عن 6 أحرف",
+  "nameRequiredError": "يرجى إدخال الاسم بالكامل",
+  "navHome": "الرئيسية",
+  "navMedications": "الأدوية",
+  "navVitals": "القياسات",
+  "navMore": "المزيد",
+  "navTimeline": "الجدول الزمني",
+  "navTrends": "اتجاهات القياسات",
+  "navInventoryComm": "المخزون والتواصل",
+  "navVoiceVitals": "القياس بالصوت",
+  "navSos": "استغاثة",
+  "navNotifications": "الإشعارات",
+  "navSettings": "الإعدادات",
+  "goodMorning": "صباح الخير",
+  "goodMorningGreeting": "نتمنى لك يوماً صحياً وسعيداً",
+  "todayMedicationCardTitle": "دواء اليوم",
+  "weeklyAdherenceTitle": "الالتزام بالأدوية هذا الأسبوع",
+  "weeklyAdherenceSub": "{taken} من {total} جرعات",
+  "@weeklyAdherenceSub": {
+    "placeholders": {
+      "taken": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "weeklyAdherenceKeepUp": "أحسنت، استمر",
+  "timeForMedicationTitle": "حان وقت الدواء",
+  "timeForMedicationTip": "حافظ على التزامك بموعد الدواء لصحة أفضل",
+  "tookItButton": "أخذته",
+  "snoozeButton": "بعدين",
+  "stockAvailableBadge": "متوفر",
+  "stockRemainingPillsBadge": "متبقي {count} حبات",
+  "@stockRemainingPillsBadge": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stockLowBadge": "مخزون منخفض",
+  "onceDaily": "مرة يومياً",
+  "twiceDaily": "مرتين يومياً",
+  "unitMmHg": "مم زئبق",
+  "unitMgDl": "مجم/دسل",
+  "lastReadingToday": "آخر قياس: اليوم",
+  "escalationReminder15m": "+15 دقيقة: تم إرسال تذكير",
+  "escalationFamily30m": "+30 دقيقة: تم إشعار أفراد العائلة",
+  "escalationDoctor60m": "+60 دقيقة: التصعيد للطبيب إذا استمرت الجرعة مفقودة",
+  "upcomingDoseLabel": "الجرعة القادمة",
+  "bpLast7Days": "ضغط الدم (آخر 7 أيام)",
+  "glucoseLast7Days": "سكر الدم (آخر 7 أيام)",
+  "withinNormalCount": "ضمن الطبيعي",
+  "slightlyHighCount": "مرتفع قليلاً",
+  "highCount": "مرتفع",
+  "currentInventoryHeader": "المخزون الحالي",
+  "manageMedicationsLink": "إدارة الأدوية",
+  "remoteAdjustDosesButton": "تعديل الجرعات عن بُعد",
+  "communicationHeader": "التواصل",
+  "messagePharmacyButton": "رسالة للصيدلية",
+  "voiceMessageGrandchildrenTitle": "رسالة صوتية من الأحفاد",
+  "voiceMessageGrandchildrenQuote": "\"جدّي الحبيب .. نحبك كثيراً\"",
+  "callNowUrgentButton": "اتصال الآن — تنبيه عاجل",
+  "aiExtractedNotice": "تم استخراج البيانات بواسطة الذكاء الاصطناعي — يرجى مراجعة وتعديل أي بيانات غير دقيقة",
+  "highConfidenceBadge": "ثقة عالية",
+  "needsReviewBadge": "يحتاج مراجعة",
+  "secureShareTitle": "مشاركة آمنة",
+  "secureShareSubtitle": "مشاركة مؤقتة وآمنة لتقرير المريض عبر رمز QR",
+  "expiresIn24Hours": "ينتهي خلال 24 ساعة",
+  "expiresIn24HoursSub": "سينتهي الرابط تلقائياً بعد 24 ساعة لحماية خصوصية المريض",
+  "shareLinkButton": "مشاركة الرابط",
+  "downloadPdfButton": "تحميل PDF",
+  "voiceVitalTitle": "القياس بالصوت",
+  "voiceVitalSubtitle": "تحدث لإدخال قياساتك بسهولة",
+  "pressAndSpeak": "اضغط وتكلم",
+  "vitalLoggedSuccess": "تم تسجيل القياس",
+  "reassuringStatusTitle": "الحالة مطمئنة",
+  "reassuringStatusSub": "قياسك ضمن المعدل الطبيعي",
+  "sosScreenTitle": "استغاثة",
+  "sosScreenSubtitle": "للحصول على المساعدة فوراً",
+  "sosHold3Seconds": "اضغط مطولاً 3 ثواني",
+  "sosLocationSharingNotice": "سيتم الاتصال بالمرافقين ومشاركة موقعك الحالي",
+  "currentLocationShareTitle": "مشاركة الموقع الحالي",
+  "caregiversSectionTitle": "المرافقون",
+  "callNowButton": "اتصال الآن",
+  "notificationsTitle": "الإشعارات",
+  "filterAll": "الكل",
+  "filterMedications": "الأدوية",
+  "filterCaregivers": "المرافقون",
+  "filterAlerts": "التنبيهات",
+  "notifDoseTimeTitle": "موعد الدواء",
+  "notifCaregiverMsgTitle": "رسالة من المرافق",
+  "notifLowStockTitle": "انخفاض كمية الدواء",
+  "notifHighVitalTitle": "ارتفاع في القياس",
+  "settingsTitle": "الإعدادات",
+  "fontSizeLabel": "تكبير الخط",
+  "fontSizeNormal": "عادي",
+  "fontSizeLarge": "كبير",
+  "fontSizeExtraLarge": "كبير جداً",
+  "caregiversSettingsTitle": "المرافقون",
+  "caregiversSettingsSub": "إدارة المرافقين والتواصل معهم",
+  "notificationSoundTitle": "صوت الإشعارات",
+  "notificationSoundSub": "نغمة واضحة",
+  "offlineSyncTitle": "المزامنة بدون إنترنت",
+  "offlineSyncSub": "تتم المزامنة عند توفر الإنترنت",
+  "reminderNotificationBody": "موعد تناول الجرعة الآن",
+  "reminderChannelName": "منبهات الأدوية",
+  "reminderChannelDescription": "تنبيهات مواعيد جرعات الأدوية لكبار السن",
+  "alertSosTitle": "نداء استغاثة",
+  "alertSosBody": "تم إطلاق نداء استغاثة عاجل",
+  "alertSosNote": "ملاحظة: {note}",
+  "@alertSosNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
+  "alertCriticalVitalTitle": "قياس حيوي يحتاج انتباهاً",
+  "alertVitalReading": "تم رصد قراءة {value}",
+  "@alertVitalReading": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "alertLowStockTitle": "انخفاض كمية الدواء",
+  "alertLowStockBody": "كمية دواء ({name}) قاربت على النفاد",
+  "@alertLowStockBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "alertMissedDoseTitle": "جرعة فائتة",
+  "alertMissedDoseBody": "جرعة ({name}) لم تُتناول في موعدها",
+  "@alertMissedDoseBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "alertExpiryTitle": "انتهاء صلاحية الدواء",
+  "alertExpiryBody": "انتهت صلاحية دواء ({name})",
+  "@alertExpiryBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "alertGenericBody": "تنبيه جديد من تطبيق ميدليفا",
+  "alertCaregiversNotified": "تم إبلاغ المرافقين",
+  "timeJustNow": "الآن",
+  "timeMinutesAgo": "منذ {count} دقيقة",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "منذ {count} ساعة",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "منذ {count} يوم",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notifDoseBody": "حان وقت تناول دواء ({name})",
+  "@notifDoseBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifDoseSub": "الموعد {time}",
+  "@notifDoseSub": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLowStockBody": "كمية دواء ({name}) قاربت على النفاد",
+  "@notifLowStockBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "notifLowStockSub": "متبقي {days} يوم",
+  "@notifLowStockSub": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "notifHighVitalBody": "تم رصد قراءة في القياس {value}",
+  "@notifHighVitalBody": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "notifCaregiverMonitorSub": "يتابعون حالتك يومياً",
+  "notifCaregiversBody": "المرافقون: {names}",
+  "@notifCaregiversBody": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "notifEmptyTitle": "لا توجد إشعارات",
+  "notifEmptySub": "ستظهر التنبيهات الجديدة هنا فور وصولها",
+  "noEmergencyContacts": "لا توجد جهات اتصال مسجلة بعد — أضف جهة اتصال ليتم إبلاغها فور الاستغاثة",
+  "locationCoordinatesLabel": "الموقع: {lat}, {lng}",
+  "@locationCoordinatesLabel": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
+  "locationUnavailable": "لم يتم تحديد الموقع — سيتم إبلاغ جهات الاتصال بدون موقع",
+  "scanFrameHint": "ضع الروشتة داخل الإطار والتقط الصورة",
+  "scanNoMedicationsFound": "لم يتم التعرف على أي دواء في الصورة",
+  "scanNoMedicationsFoundHint": "جرّب التقاط صورة أوضح للعلبة أو الروشتة",
+  "doseFrequencyOnce": "مرة واحدة يومياً",
+  "doseFrequencyTwice": "مرتين يومياً"
 }

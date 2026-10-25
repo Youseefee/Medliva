@@ -32,7 +32,7 @@ class IntakeLogOut(BaseModel):
 class SyncItem(BaseModel):
     client_uuid: str
     entity: str  # "intake_log", "vitals_log", "medication"
-    op: str  # "create", "update"
+    op: str = "create"  # "create", "update"
     payload: dict[str, Any]
 
 

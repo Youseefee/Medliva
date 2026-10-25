@@ -14,4 +14,6 @@ class ExtractedDrugOut(BaseModel):
 
 class PrescriptionScanResponse(BaseModel):
     medications: list[ExtractedDrugOut]
-    confidence: float = 0.95
+    confidence: float = 0.0
+    # "gemini_vision" when the photo was read by Gemini, "text" otherwise.
+    source: str = "text"

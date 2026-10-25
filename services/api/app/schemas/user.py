@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,7 +11,8 @@ class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    phone: str
+    email: str | None = None
+    phone: str | None = None
     name: str | None = None
     role: UserRole
     language: str
@@ -21,10 +23,11 @@ class UserOut(BaseModel):
 
 
 class UserUpdateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = Field(None, max_length=100)
-    role: UserRole | None = None
+    role: Literal["patient", "caregiver"] | None = None
     language: str | None = Field(None, max_length=10)
     timezone: str | None = Field(None, max_length=50)
     birth_date: date | None = None
     address: str | None = None
-

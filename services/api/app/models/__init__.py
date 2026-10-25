@@ -12,15 +12,13 @@ from app.models.medication import (
 )
 from app.models.prescriptions import Prescription
 from app.models.reports import ReportShare
-from app.models.user import OtpChallenge, RefreshSession, User, UserRole
+from app.models.user import User, UserRole
 from app.models.vitals import VitalBand, VitalsLog, VitalType
 
 __all__ = [
     "Base",
     "User",
     "UserRole",
-    "OtpChallenge",
-    "RefreshSession",
     "CaregiverLink",
     "CaregiverLinkStatus",
     "DrugCatalog",

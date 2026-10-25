@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Script to generate the 11-page English Use Cases and Features Guide for CareElder.
+Script to generate the 11-page English Use Cases and Features Guide for Medliva.
 User Updates:
 1. Removed the top header bar (.page-header) completely from all pages.
 2. Removed the bottom footer bar (.page-footer) completely from all pages.
 3. Enlarged font size across the document (titles, body, lists, tables).
 4. Pure Black and White / Minimalist styling with Alexandria font.
-Output: CareElder_UseCases_and_Features_EN.pdf (Exactly 11 pages)
+Output: Medliva_UseCases_and_Features_EN.pdf (Exactly 11 pages)
 """
 
 import os
@@ -14,8 +14,8 @@ import subprocess
 import pypdf
 
 WORKSPACE = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "original"))
-HTML_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_EN.html")
-PDF_FILE = os.path.join(WORKSPACE, "CareElder_UseCases_and_Features_EN.pdf")
+HTML_FILE = os.path.join(WORKSPACE, "Medliva_UseCases_and_Features_EN.html")
+PDF_FILE = os.path.join(WORKSPACE, "Medliva_UseCases_and_Features_EN.pdf")
 
 CHROME_PATH = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 if not os.path.exists(CHROME_PATH):
@@ -26,7 +26,7 @@ def build_english_html():
 <html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8">
-<title>CareElder - Engineering Use Cases & System Feature Specifications</title>
+<title>Medliva - Engineering Use Cases & System Feature Specifications</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
 
@@ -393,13 +393,13 @@ ul.bullet-list li {
         <p>Department of Software Engineering & Information Technology</p>
       </div>
       <div>
-        <span class="tag-clean tag-black" style="padding: 5px 12px; font-size: 9pt;">CareElder Platform</span>
+        <span class="tag-clean tag-black" style="padding: 5px 12px; font-size: 9pt;">Medliva Platform</span>
       </div>
     </div>
 
     <div class="cover-center">
       <div class="cover-tag-box">ENGINEERING SPECIFICATION & USE CASES</div>
-      <h1 class="cover-main-title">CareElder (رفيق العافية)</h1>
+      <h1 class="cover-main-title">Medliva (رفيق العافية)</h1>
       <h2 class="cover-sub-title">Intelligent Healthcare, Medication Adherence & Clinical Monitoring Platform for Seniors</h2>
       <p class="cover-desc">
         A rigorous architectural and functional specification detailing verified Use Cases, clinical problem formulations, accessible geriatric user experience design, and cross-stakeholder workflows linking senior patients, family caregivers, and attending physicians.
@@ -428,7 +428,7 @@ ul.bullet-list li {
     </div>
 
     <div class="cover-footer">
-      <div>Engineering Team: CareElder Graduation Project Team - Class of 2026</div>
+      <div>Engineering Team: Medliva Graduation Project Team - Class of 2026</div>
       <div>Date: 2026</div>
     </div>
   </div>
@@ -449,7 +449,7 @@ ul.bullet-list li {
         <span>Executive Summary</span>
       </div>
       <p style="font-size: 9.6pt; line-height: 1.6;">
-        <strong>CareElder (رفيق العافية)</strong> is a specialized digital health platform designed for aging seniors and chronic patients. Departing from complex commercial apps, CareElder implements an <strong>Offline-First Architecture</strong> with simplified interfaces tailored to geriatric motor and cognitive realities. The system synchronizes the senior patient, family caregiver, and physician via hardware-level exact alarms, multimodal prescription OCR, zero-typing colloquial voice logging, pill inventory management, and longitudinal clinical analytics.
+        <strong>Medliva (رفيق العافية)</strong> is a specialized digital health platform designed for aging seniors and chronic patients. Departing from complex commercial apps, Medliva implements an <strong>Offline-First Architecture</strong> with simplified interfaces tailored to geriatric motor and cognitive realities. The system synchronizes the senior patient, family caregiver, and physician via hardware-level exact alarms, multimodal prescription OCR, zero-typing colloquial voice logging, pill inventory management, and longitudinal clinical analytics.
       </p>
     </div>
 
@@ -593,14 +593,14 @@ ul.bullet-list li {
 
     <div class="box">
       <div class="box-header">
-        <span>Comparative Analysis: Status Quo vs. CareElder Solution</span>
+        <span>Comparative Analysis: Status Quo vs. Medliva Solution</span>
       </div>
       <table class="table-clean">
         <thead>
           <tr>
             <th style="width: 25%;">Evaluation Metric</th>
             <th style="width: 37%;">Commercial Apps & Traditional Habits</th>
-            <th style="width: 38%;">CareElder Engineering Innovation</th>
+            <th style="width: 38%;">Medliva Engineering Innovation</th>
           </tr>
         </thead>
         <tbody>
@@ -645,7 +645,7 @@ ul.bullet-list li {
         <span>Architectural Philosophy: Empathetic Geriatric Engineering</span>
       </div>
       <p style="font-size: 9.6pt; line-height: 1.6;">
-        CareElder is engineered as a <strong>continuous preventative healthcare ecosystem</strong> bridging patients, families, and clinicians. The platform is grounded in five core architectural pillars that ensure offline reliability, ease of use, and verified clinical utility.
+        Medliva is engineered as a <strong>continuous preventative healthcare ecosystem</strong> bridging patients, families, and clinicians. The platform is grounded in five core architectural pillars that ensure offline reliability, ease of use, and verified clinical utility.
       </p>
     </div>
 
@@ -700,7 +700,7 @@ ul.bullet-list li {
 
     <div class="box">
       <div class="box-header">
-        <span>CareElder Closed-Loop Daily Care Execution Pipeline</span>
+        <span>Medliva Closed-Loop Daily Care Execution Pipeline</span>
       </div>
       <table class="table-clean" style="text-align: center;">
         <thead>
@@ -1270,7 +1270,7 @@ ul.bullet-list li {
         <span>Clinical Value Proposition</span>
       </div>
       <p style="font-size: 9.4pt; line-height: 1.6;">
-        Transform clinical consultations from subjective, memory-based guesswork into precision data reviews. CareElder compiles 30 to 90 days of verified adherence data and vital sign readings into an executive clinical report that empowers physicians to make informed therapeutic adjustments.
+        Transform clinical consultations from subjective, memory-based guesswork into precision data reviews. Medliva compiles 30 to 90 days of verified adherence data and vital sign readings into an executive clinical report that empowers physicians to make informed therapeutic adjustments.
       </p>
     </div>
 

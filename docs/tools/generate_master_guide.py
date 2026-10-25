@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Script to generate the comprehensive Graduation Project Master Plan & Engineering Specification PDF.
-Project: CareElder (رفيق العافية) - Smart Healthcare & Adherence Platform for Elderly and Chronic Patients.
+Project: Medliva (رفيق العافية) - Smart Healthcare & Adherence Platform for Elderly and Chronic Patients.
 """
 
 import os
@@ -13,7 +13,7 @@ def build_html():
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>وثيقة المواصفات الهندسية وخطة التطوير الشاملة لمشروع التخرج - رفيق العافية (CareElder)</title>
+<title>وثيقة المواصفات الهندسية وخطة التطوير الشاملة لمشروع التخرج - رفيق العافية (Medliva)</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
@@ -510,7 +510,7 @@ tr:nth-child(even) {
 
   <div class="cover-body">
     <div class="cover-logo-icon">🩺</div>
-    <h1 class="cover-title">رفيق العافية (CareElder)</h1>
+    <h1 class="cover-title">رفيق العافية (Medliva)</h1>
     <div class="cover-subtitle">المنصة الذكية المتكاملة لرعاية كبار السن ومرضى الأمراض المزمنة</div>
     <p class="cover-desc">
       وثيقة المواصفات الهندسية وخطة التطوير الشاملة لكافة مراحل دورة حياة البرمجيات (SDLC)؛ من استنباط المتطلبات وتحليلها، إلى تصميم واجهات كبار السن (Elderly UX)، وهيكلية النظام وقواعد البيانات، وتطبيق الموبايل العابر للمنصات بنظام المنبهات غير المتصلة الصارم، ودمج نماذج الذكاء الاصطناعي لاستخراج الروشتات الطبية والصوت العربي، وحتى إجراءات النشر واستراتيجية المناقشة الأكاديمية للدفاع عن المشروع.
@@ -1330,7 +1330,7 @@ def calculate_depletion_date(current_stock: int, daily_dose_count: int) -> dict:
         <div>متوسط السكر (صائم): <strong style="color: var(--primary); font-size: 11pt;">118 mg/dL</strong></div>
         <div>متوسط ضغط الدم: <strong style="color: var(--primary); font-size: 11pt;">128/82 mmHg</strong></div>
       </div>
-      <p style="color: var(--text-muted); font-size: 8pt; margin: 0;">تم توليد هذا التقرير تلقائياً عبر منصة CareElder بناءً على 84 قراءة حيوية و 112 جرعة مسجلة.</p>
+      <p style="color: var(--text-muted); font-size: 8pt; margin: 0;">تم توليد هذا التقرير تلقائياً عبر منصة Medliva بناءً على 84 قراءة حيوية و 112 جرعة مسجلة.</p>
     </div>
   </div>
 </div>
@@ -1581,7 +1581,7 @@ services:
   <div class="card card-primary">
     <div class="card-title">س7: ما هو الفارق الجوهري والابتكاري بين تطبيقكم وبين تطبيقات التذكير الموجودة على المتجر؟</div>
     <p style="font-size: 8.5pt;">
-      <strong>الإجابة الهندسية:</strong> معظم التطبيقات الموجودة (مثل Medisafe أو منبه الهاتف) هي أدوات تذكير صامتة معقدة للمستخدم العادي الشاب. الابتكار في <strong>CareElder</strong> يكمن في:
+      <strong>الإجابة الهندسية:</strong> معظم التطبيقات الموجودة (مثل Medisafe أو منبه الهاتف) هي أدوات تذكير صامتة معقدة للمستخدم العادي الشاب. الابتكار في <strong>Medliva</strong> يكمن في:
       <br>• أولاً: التخصيص الكامل للخصائص الإدراكية والجسدية لكبار السن (واجهة مهمة واحدة، صوت ناطق، تسجيل صوتي كامل).
       <br>• ثانياً: إدخال الأدوية عبر الذكاء الاصطناعي مباشرة من صورة الروشتة في ثوانٍ دون كتابة يدوية مملة.
       <br>• ثالثاً: التكامل اللحظي ثلاثي الأطراف (المريض المسن + المرافق العائلي بهرم تصعيدي + تقرير الطبيب التحليلي المعتمد).
@@ -1625,7 +1625,7 @@ services:
   <div class="card card-primary">
     <div class="card-title">الخلاصة الإنشائية للمشروع</div>
     <p>
-      يمثل مشروع <strong>رفيق العافية (CareElder)</strong> نموذجاً تطبيقياً متكاملاً لهندسة البرمجيات الموجهة لخدمة المجتمع وحل مشكلة صحية حقيقية تؤرق ملايين الأسر. إن المزج المدروس بين بنية الأنظمة الموثوقة غير المتصلة (Offline-First Architecture)، ومعايير إتاحة الاستخدام الصارمة لكبار السن (WCAG 2.1 AAA)، وأحدث تقنيات الرؤية الحاسوبية ومعالجة اللغات الطبيعية المدعومة بالذكاء الاصطناعي التوليدي، جعل من المشروع منصة رائدة مؤهلة للمنافسة في مسابقات مشاريع التخرج الوطنية والدولية، والتحول إلى منتج ريادي قابل للتسويق والتبني السريري.
+      يمثل مشروع <strong>رفيق العافية (Medliva)</strong> نموذجاً تطبيقياً متكاملاً لهندسة البرمجيات الموجهة لخدمة المجتمع وحل مشكلة صحية حقيقية تؤرق ملايين الأسر. إن المزج المدروس بين بنية الأنظمة الموثوقة غير المتصلة (Offline-First Architecture)، ومعايير إتاحة الاستخدام الصارمة لكبار السن (WCAG 2.1 AAA)، وأحدث تقنيات الرؤية الحاسوبية ومعالجة اللغات الطبيعية المدعومة بالذكاء الاصطناعي التوليدي، جعل من المشروع منصة رائدة مؤهلة للمنافسة في مسابقات مشاريع التخرج الوطنية والدولية، والتحول إلى منتج ريادي قابل للتسويق والتبني السريري.
     </p>
   </div>
 
@@ -1664,7 +1664,7 @@ services:
   </div>
 
   <div class="page-footer">
-    <span>مشروع التخرج: رفيق العافية (CareElder) - وثيقة المواصفات الهندسية الشاملة</span>
+    <span>مشروع التخرج: رفيق العافية (Medliva) - وثيقة المواصفات الهندسية الشاملة</span>
     <span>جميع الحقوق محفوظة © 2026</span>
   </div>
 </div>
@@ -1676,8 +1676,8 @@ services:
 
 def main():
     workspace_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "original"))
-    html_file = os.path.join(workspace_dir, "CareElder_Graduation_Project_Master_Plan.html")
-    pdf_file_en = os.path.join(workspace_dir, "CareElder_Complete_Development_Guide.pdf")
+    html_file = os.path.join(workspace_dir, "Medliva_Graduation_Project_Master_Plan.html")
+    pdf_file_en = os.path.join(workspace_dir, "Medliva_Complete_Development_Guide.pdf")
     pdf_file_ar = os.path.join(workspace_dir, "مشروع_تخرج_تطبيق_رعاية_كبار_السن_دليل_التطوير_الشامل.pdf")
 
     print("Building HTML document...")

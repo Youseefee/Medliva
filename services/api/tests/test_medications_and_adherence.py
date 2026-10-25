@@ -6,18 +6,10 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_medications_crud_and_adherence(client: AsyncClient):
-    # Patient login
-    p_req = await client.post("/api/v1/auth/otp/request", json={"phone": "01033334444"})
-    p_code = p_req.json()["dev_code"]
-    p_auth = await client.post(
-        "/api/v1/auth/otp/verify",
-        json={"phone": "01033334444", "code": p_code, "name": "مريض السكر"},
-    )
-    p_token = p_auth.json()["access_token"]
-    patient_id = p_auth.json()["user"]["id"]
-    headers = {"Authorization": f"Bearer {p_token}"}
-
+async def test_medications_crud_and_adherence(client: AsyncClient, user_factory):
+    patient = await user_factory(phone="+201033334444", name="مريض السكر")
+    patient_id = str(patient.id)
+    headers = {"Authorization": f"Bearer {patient.id}"}
 
     # 1. Create medication with schedules
     med_res = await client.post(

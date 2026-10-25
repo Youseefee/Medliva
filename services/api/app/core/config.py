@@ -19,28 +19,20 @@ class Settings(BaseSettings):
     )
 
     env: Literal["dev", "test", "prod"] = "dev"
-    project_name: str = "CareElder API"
+    project_name: str = "Medliva API"
     api_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:3000"]
 
     # Supabase Postgres (asyncpg driver)
-    database_url: str = "sqlite+aiosqlite:///./careelder_dev.db"
+    database_url: str = "sqlite+aiosqlite:///./medliva_dev.db"
     redis_url: str | None = None
 
-    # Auth
-    jwt_secret: str = "change_me_dev_only_secret_key_32chars!!"
-    jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 15
-    refresh_token_expire_days: int = 30
+    # Supabase Auth
+    supabase_url: str = ""
+    supabase_publishable_key: str = ""
 
-    # OTP
-    otp_length: int = 6
-    otp_ttl_seconds: int = 300
-    otp_resend_cooldown_seconds: int = 60
-    otp_max_attempts: int = 5
-    otp_max_requests_per_hour: int = 5
-    # In local development this can be enabled instead of configuring an SMS provider.
-    otp_return_in_response: bool = False
+    # Optional Gemini API key for real prescription vision OCR
+    gemini_api_key: str = ""
 
     @model_validator(mode="after")
     def validate_production_security(self) -> Self:
@@ -48,10 +40,10 @@ class Settings(BaseSettings):
             return self
 
         problems: list[str] = []
-        if len(self.jwt_secret) < 32 or self.jwt_secret.startswith("change_me"):
-            problems.append("JWT_SECRET must be a non-default secret with at least 32 characters")
-        if self.otp_return_in_response:
-            problems.append("OTP_RETURN_IN_RESPONSE must be false in production")
+        if not self.supabase_url.startswith("https://"):
+            problems.append("SUPABASE_URL must be an https URL")
+        if not self.supabase_publishable_key:
+            problems.append("SUPABASE_PUBLISHABLE_KEY is required")
         if not self.cors_origins or "*" in self.cors_origins:
             problems.append("CORS_ORIGINS must contain explicit trusted origins in production")
         if self.database_url.startswith("sqlite"):

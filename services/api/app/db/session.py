@@ -8,8 +8,12 @@ from app.core.config import get_settings
 def _engine_kwargs(url: str) -> dict:
     kwargs: dict = {"pool_pre_ping": True}
     if url.startswith("postgresql+asyncpg"):
-        # Supabase pooler (PgBouncer, transaction mode) doesn't support prepared statements.
-        kwargs["connect_args"] = {"statement_cache_size": 0, "prepared_statement_cache_size": 0}
+        # Require TLS, and disable prepared statement caches for Supabase pooler compatibility.
+        kwargs["connect_args"] = {
+            "ssl": "require",
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
+        }
     return kwargs
 
 

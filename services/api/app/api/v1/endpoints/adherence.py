@@ -113,6 +113,8 @@ async def sync_batch(
             if not med:
                 continue
 
+            await check_patient_access(med.patient_id, current_user, db)
+
             scheduled_time = datetime.fromisoformat(item.payload["scheduled_time"])
             actual_time_raw = item.payload.get("actual_time")
             actual_time = datetime.fromisoformat(actual_time_raw) if actual_time_raw else None
@@ -148,6 +150,7 @@ async def sync_batch(
                 if item.payload.get("patient_id")
                 else current_user.id
             )
+            await check_patient_access(patient_id, current_user, db)
             vital_type = VitalType(item.payload["type"])
             p_val = float(item.payload["value_primary"])
             s_val = (

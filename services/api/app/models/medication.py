@@ -40,7 +40,7 @@ class Medication(Base, IdTimestampMixin):
         ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
     drug_catalog_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("drug_catalog.id", ondelete="SET NULL"), nullable=True
+        ForeignKey("drug_catalog.id", ondelete="SET NULL"), index=True, nullable=True
     )
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     trade_name: Mapped[str | None] = mapped_column(String(150), nullable=True)

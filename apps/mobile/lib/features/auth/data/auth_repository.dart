@@ -1,77 +1,48 @@
-import 'package:careelder/core/network/api_client.dart';
-import 'package:careelder/core/storage/token_storage.dart';
-import 'package:careelder/features/auth/domain/models/user.dart';
 import 'package:dio/dio.dart';
-
-class OtpRequestResult {
-  const OtpRequestResult({
-    required this.phone,
-    required this.expiresIn,
-    this.devCode,
-  });
-
-  final String phone;
-  final int expiresIn;
-  final String? devCode;
-}
+import 'package:medliva/core/network/api_client.dart';
+import 'package:medliva/core/storage/token_storage.dart';
+import 'package:medliva/features/auth/domain/models/user.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthRepository {
   AuthRepository({
     required ApiClient apiClient,
     required TokenStorage tokenStorage,
-  })  : _apiClient = apiClient,
-        _tokenStorage = tokenStorage;
+    required SupabaseClient supabaseClient,
+  }) : _apiClient = apiClient,
+       _tokenStorage = tokenStorage,
+       _supabaseClient = supabaseClient;
 
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
+  final SupabaseClient _supabaseClient;
 
-  Future<OtpRequestResult> requestOtp(String phone) async {
-    try {
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/auth/otp/request',
-        data: {'phone': phone},
-      );
-      final data = res.data!;
-      return OtpRequestResult(
-        phone: data['phone'] as String,
-        expiresIn: data['expires_in'] as int,
-        devCode: data['dev_code'] as String?,
-      );
-    } on DioException catch (e) {
-      if (e.error is ApiException) throw e.error!;
-      rethrow;
-    }
+  Future<bool> signUp({
+    required String email,
+    required String password,
+    required String name,
+    String role = 'patient',
+  }) async {
+    final response = await _supabaseClient.auth.signUp(
+      email: email.trim(),
+      password: password,
+      data: {
+        'full_name': name.trim(),
+        'role': role,
+      },
+    );
+    return response.session != null;
   }
 
-  Future<UserModel> verifyOtp({
-    required String phone,
-    required String code,
-    String? name,
+  Future<UserModel> signIn({
+    required String email,
+    required String password,
   }) async {
-    try {
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/auth/otp/verify',
-        data: {
-          'phone': phone,
-          'code': code,
-          if (name != null && name.isNotEmpty) 'name': name,
-        },
-      );
-      final data = res.data!;
-      final accessToken = data['access_token'] as String;
-      final refreshToken = data['refresh_token'] as String;
-      final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
-
-      await _tokenStorage.saveTokens(
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      );
-
-      return user;
-    } on DioException catch (e) {
-      if (e.error is ApiException) throw e.error!;
-      rethrow;
-    }
+    await _supabaseClient.auth.signInWithPassword(
+      email: email.trim(),
+      password: password,
+    );
+    return await getMe();
   }
 
   Future<UserModel> getMe() async {
@@ -84,19 +55,26 @@ class AuthRepository {
     }
   }
 
-  Future<void> logout() async {
-    final refreshToken = await _tokenStorage.getRefreshToken();
+  Future<UserModel> updateMe({
+    String? name,
+    String? language,
+    String? role,
+  }) async {
     try {
-      if (refreshToken != null && refreshToken.isNotEmpty) {
-        await _apiClient.dio.post<void>(
-          '/auth/logout',
-          data: {'refresh_token': refreshToken},
-        );
-      }
-    } catch (_) {
-      // Logout must still clear local credentials when the device is offline.
-    } finally {
-      await _tokenStorage.clearTokens();
+      final res = await _apiClient.dio.patch<Map<String, dynamic>>(
+        '/me',
+        data: {
+          if (name != null) 'name': name,
+          if (language != null) 'language': language,
+          if (role != null) 'role': role,
+        },
+      );
+      return UserModel.fromJson(res.data!);
+    } on DioException catch (e) {
+      if (e.error is ApiException) throw e.error!;
+      rethrow;
     }
   }
+
+  Future<void> logout() => _tokenStorage.clearTokens();
 }

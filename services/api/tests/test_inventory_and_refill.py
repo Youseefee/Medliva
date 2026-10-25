@@ -3,18 +3,10 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_inventory_forecast_and_refill(client: AsyncClient):
-    # Register patient
-    p_req = await client.post("/api/v1/auth/otp/request", json={"phone": "01055556666"})
-    p_code = p_req.json()["dev_code"]
-    p_auth = await client.post(
-        "/api/v1/auth/otp/verify",
-        json={"phone": "01055556666", "code": p_code, "name": "مريض القلب"},
-    )
-    p_token = p_auth.json()["access_token"]
-    patient_id = p_auth.json()["user"]["id"]
-    headers = {"Authorization": f"Bearer {p_token}"}
-
+async def test_inventory_forecast_and_refill(client: AsyncClient, user_factory):
+    patient = await user_factory(phone="+201055556666", name="مريض القلب")
+    patient_id = str(patient.id)
+    headers = {"Authorization": f"Bearer {patient.id}"}
 
     # Add medication with stock 4 and daily dose 2
     # (2 doses per day -> 2 days remaining <= threshold 5)

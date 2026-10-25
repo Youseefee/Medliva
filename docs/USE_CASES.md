@@ -1,6 +1,6 @@
 # حالات الاستخدام (Use Cases)
 
-> المرجع الكامل: [original/CareElder_UseCases_and_Features_AR.html](original/CareElder_UseCases_and_Features_AR.html)
+> المرجع الكامل: [original/Medliva_UseCases_and_Features_AR.html](original/Medliva_UseCases_and_Features_AR.html)
 
 ## الممثلون
 - **المريض (Senior):** 65+، مهارات تقنية محدودة، ضعف نظر محتمل.
@@ -50,7 +50,7 @@
 - PDF + QR مشفّر مؤقت يفتح بوابة ويب للقراءة فقط.
 
 ## UC-07 زر الاستغاثة — Must
-- ضغط مطوّل 3 ثوانٍ → GPS → FCM عالي الأولوية + SMS/مكالمة (Twilio) لجهات الطوارئ.
+- ضغط مطوّل 3 ثوانٍ → GPS → حفظ نداء الاستغاثة لدى API وعرض جهات الاتصال للاتصال بها.
 
 ## UC-08..10 — Could / Won't
 - التداخلات الدوائية، مساعد صوتي محادثي، تكامل أجهزة Bluetooth/ساعات.

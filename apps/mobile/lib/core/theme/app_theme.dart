@@ -17,6 +17,7 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       fontFamily: fontFamily,
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
@@ -55,6 +56,12 @@ class AppTheme {
           height: 1.5,
         ),
         bodyMedium: TextStyle(
+          fontSize: 18,
+          color: textSecondary,
+          fontFamily: fontFamily,
+          height: 1.4,
+        ),
+        bodySmall: TextStyle(
           fontSize: 16,
           color: textSecondary,
           fontFamily: fontFamily,
@@ -85,7 +92,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        contentPadding: const EdgeInsetsDirectional.symmetric(
+          horizontal: 20,
+          vertical: 20,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.5),

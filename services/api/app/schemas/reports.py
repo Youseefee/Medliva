@@ -17,7 +17,7 @@ class ReportShareOut(BaseModel):
 
 class PublicReportOut(BaseModel):
     patient_name: str
-    patient_phone: str
+    patient_phone: str | None
     adherence_rate_pct: float
     total_doses: int
     taken_doses: int
@@ -25,3 +25,19 @@ class PublicReportOut(BaseModel):
     active_medications: list[dict[str, Any]]
     recent_vitals: list[dict[str, Any]]
     recent_intake_logs: list[dict[str, Any]]
+
+
+class ReportSummaryOut(BaseModel):
+    patient_id: str
+    patient_name: str
+    patient_phone: str | None
+    from_date: str
+    to_date: str
+    adherence_rate_pct: float
+    total_doses: int
+    taken_doses: int
+    skipped_doses: int
+    missed_doses_count: int
+    active_medications: list[dict[str, Any]]
+    adherence_history: list[dict[str, Any]]
+    vitals_history: list[dict[str, Any]]

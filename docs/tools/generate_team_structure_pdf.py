@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Generate the detailed CareElder team structure and work plan PDF."""
+"""Generate the detailed Medliva team structure and work plan PDF."""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ import pypdf
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = BASE_DIR / "original"
-HTML_FILE = OUTPUT_DIR / "CareElder_Team_Roles_and_Workplan.html"
-PDF_FILE = OUTPUT_DIR / "CareElder_Team_Roles_and_Workplan.pdf"
+HTML_FILE = OUTPUT_DIR / "Medliva_Team_Roles_and_Workplan.html"
+PDF_FILE = OUTPUT_DIR / "Medliva_Team_Roles_and_Workplan.pdf"
 
 CHROME_CANDIDATES = (
     Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
@@ -26,7 +26,7 @@ def build_html() -> str:
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>توزيع فريق مشروع CareElder</title>
+<title>توزيع فريق مشروع Medliva</title>
 <style>
 @page { size: A4; margin: 14mm 13mm; }
 * { box-sizing: border-box; }
@@ -85,8 +85,8 @@ li { margin: 2px 0; }
 
 <section class="page cover">
   <div>
-    <div class="section-label">CAREELDER · TEAM ORGANIZATION DOCUMENT</div>
-    <h1>توزيع فريق مشروع<br>CareElder</h1>
+    <div class="section-label">MEDLIVA · TEAM ORGANIZATION DOCUMENT</div>
+    <h1>توزيع فريق مشروع<br>Medliva</h1>
     <h2>خطة المسؤوليات، ملكية الملفات، المخرجات، والسبرنتات</h2>
     <p class="subtitle">وثيقة تنفيذية لتنسيق فريق مكوّن من خمسة أفراد وبناء تطبيق رعاية كبار السن بطريقة منظمة وقابلة للتسليم.</p>
   </div>
@@ -231,7 +231,7 @@ li { margin: 2px 0; }
     <tr><td class="priority-med">تأخر Portal أو CI</td><td>زياد</td><td>بناء skeleton مبكراً واختبار كل Sprint.</td></tr>
   </table>
   <div class="intro"><b>النتيجة المطلوبة:</b> فريق يعرف بالضبط من يملك كل جزء، وما الذي يجب تسليمه، وكيف يتم اكتشاف المشكلة قبل نهاية المشروع.</div>
-  <div class="footer">CareElder · Team Roles & Workplan · حمزة · سليمان · يوسف · خضر · زياد</div>
+  <div class="footer">Medliva · Team Roles & Workplan · حمزة · سليمان · يوسف · خضر · زياد</div>
 </section>
 
 </body>

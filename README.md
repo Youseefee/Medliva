@@ -1,4 +1,4 @@
-# 🩺 CareElder
+# 🩺 Medliva
 
 تطبيق ذكي لرعاية كبار السن — مشروع تخرج.
 تذكير صارم بالأدوية · مسح الروشتات بالـ AI · تسجيل القياسات بالصوت · متابعة لحظية للأهل · مخزون الأدوية · تقارير للطبيب · زر استغاثة.
@@ -20,17 +20,23 @@
 
 ## 🧱 الهيكل
 ```
-apps/mobile          Flutter (المريض + المرافق)
-apps/doctor-portal   Next.js (بوابة الطبيب)
+apps/mobile          Flutter (المريض + المرافق + توليد تقارير PDF للطبيب)
+apps/doctor-portal   توثيق فقط (استُبدلت البوابة بميزة التقرير داخل تطبيق الموبايل)
 services/api         FastAPI (modular monolith)
 infra/               ملفات الإعداد والبيئة (.env) وبدائل التشغيل
 docs/                التوثيق
 ```
 
-## 🚀 التشغيل والإعداد السحابي (بدون دوكر)
+## 🚀 التشغيل السريع (بنقرة واحدة على Windows)
+يمكنك تشغيل الـ Backend وتطبيق الويب معاً عبر:
+```powershell
+.\run.ps1
+# أو بالضغط المزدوج على ملف run.bat
+```
+
+## 🛠️ التشغيل اليدوي والإعداد السحابي (بدون دوكر)
 يعتمد المشروع على خدمات سحابية مجانية وسريعة بدون الحاجة لتثبيت Docker محلياً:
-- **قاعدة البيانات والتخزين:** [Supabase](https://supabase.com) (PostgreSQL 16 + Storage للروشتات والصوتيات).
-- **المهام المجدولة:** Supabase Cron / Edge Functions، مع Redis اختياري فقط عند الحاجة لاحقاً.
+- **قاعدة البيانات والمصادقة:** [Supabase](https://supabase.com) (PostgreSQL 16 + Supabase Email/Password Auth).
 
 ```bash
 # 1. إعداد المتغيرات
@@ -39,7 +45,11 @@ cp infra/.env.example infra/.env   # وضع روابط Supabase وبيانات �
 # 2. تشغيل الـ Backend
 cd services/api
 uv sync
-alembic upgrade head
-uvicorn app.main:app --reload
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload --port 8000
+
+# 3. تشغيل تطبيق الموبايل/الويب
+cd apps/mobile
+flutter pub get
+flutter run
 ```
-*(ملاحظة: ملف `infra/docker-compose.yml` متاح كبديل اختياري لمن يفضل تشغيل الحاويات محلياً).*

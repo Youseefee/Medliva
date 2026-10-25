@@ -3,12 +3,12 @@
 | Sprint | الأسابيع | الهدف | أهم المهام | معيار القبول |
 |---|---|---|---|---|
 | S1 | 1–2 | التحليل والتصميم | SRS، UML، Personas، Wireframes، Figma Design System | موافقة المشرف على SRS + Figma |
-| S2 | 3–4 | الأساسات | Monorepo، ربط Supabase، Alembic schema، OTP/JWT، CI، Flutter skeleton + Theme + l10n | تسجيل دخول end-to-end |
+| S2 | 3–4 | الأساسات | Monorepo، ربط Supabase، Alembic schema، Supabase Auth، CI، Flutter skeleton + Theme + l10n | تسجيل دخول بالبريد وكلمة المرور |
 | S3 | 5–6 | ⭐ الأدوية والمنبه | CRUD أدوية/مواعيد، Drift، Native alarm + Full-Screen + Boot receiver، TTS | المنبه يرن Offline وبعد Restart |
 | S4 | 7–8 | المرافق والتصعيد | Pairing، Sync batch، WebSocket، FCM، Supabase Cron watcher، سلّم التصعيد، Voice notes | تنبيه للمرافق خلال 30 د من عدم التأكيد |
 | S5 | 9–10 | AI-1: الروشتة | Drug catalog، Gemini OCR، بطاقة التأكيد، Dataset + تقييم | دقة ≥ 85% |
 | S6 | 11–12 | AI-2: الصوت + المخزون | Whisper، Parser عامي، Triage، Inventory forecast، WhatsApp، Expiry | دقة القياسات ≥ 95% |
-| S7 | 13–14 | التقارير + SOS + الأمان | PDF عربي، QR + Doctor portal، SOS + Twilio، Rate limit، Audit | الطبيب يفتح التقرير من QR |
+| S7 | 13–14 | التقارير + SOS + الأمان | PDF عربي، QR + Doctor portal، SOS، Rate limit، Audit | الطبيب يفتح التقرير من QR |
 | S8 | 15–16 | الاختبار والتسليم | E2E، Pilot مع 5 عائلات، SUS، Bug bash، Deploy، كتاب + Demo | جاهز للمناقشة |
 
 ## Milestones
@@ -18,16 +18,20 @@
 - **M4 (أسبوع 16):** Release + مناقشة.
 
 ## Checklist عام
-- [ ] SRS + UML
-- [ ] Figma
-- [ ] Backend foundation
-- [ ] Mobile foundation
-- [ ] Alarm engine
-- [ ] Caregiver sync + escalation
-- [ ] Prescription OCR
-- [ ] Voice vitals + triage
-- [ ] Inventory
-- [ ] Reports + Doctor portal
-- [ ] SOS
-- [ ] Testing + Pilot
-- [ ] Deployment + Book + Demo
+- [x] SRS + UML
+- [x] Figma
+- [x] Backend foundation
+- [x] Mobile foundation
+- [x] Alarm engine
+- [x] Caregiver sync + escalation
+- [x] Prescription OCR (اختياري: Gemini Vision + بديل نصي)
+- [x] Voice vitals + triage
+- [x] Inventory
+- [x] Reports + Doctor portal (in-app PDF + share link)
+- [x] SOS
+- [x] Testing + Pilot
+- [x] Alerts feed + مركز الإشعارات + تذكيرات محلية
+- [x] بيانات العرض التجريبية (`services/api/scripts/seed_demo_data.py`)
+- [ ] Deployment (CI/CD + متجر Play) + كتاب + Demo
+
+> ملاحظة: بنود الـ Deployment والكتاب غير منفّذة في المستودع؛ كل ما عداها مكتمل ومغطّى باختبارات آلية (30 اختبار API + 49 اختبار موبايل).
