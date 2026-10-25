@@ -11,13 +11,15 @@ class ScheduleModel {
   });
 
   factory ScheduleModel.fromJson(Map<String, dynamic> json) {
+    final rawTime = json['time_of_day'] as String;
+    final timeOfDay = rawTime.length >= 5 ? rawTime.substring(0, 5) : rawTime;
     return ScheduleModel(
-      id: json['id'] as String,
-      medicationId: json['medication_id'] as String,
-      timeOfDay: json['time_of_day'] as String,
+      id: json['id'].toString(),
+      medicationId: json['medication_id'].toString(),
+      timeOfDay: timeOfDay,
       doseAmount: (json['dose_amount'] as num?)?.toDouble() ?? 1.0,
       mealRelation: json['meal_relation'] as String? ?? 'after_meal',
-      daysMask: json['days_mask'] as int? ?? 127,
+      daysMask: (json['days_mask'] as num?)?.toInt() ?? 127,
       instructionsAr: json['instructions_ar'] as String?,
       isActive: json['is_active'] as bool? ?? true,
     );
@@ -87,19 +89,19 @@ class MedicationModel {
   factory MedicationModel.fromJson(Map<String, dynamic> json) {
     final rawSchedules = json['schedules'] as List<dynamic>? ?? const [];
     return MedicationModel(
-      id: json['id'] as String,
-      patientId: json['patient_id'] as String,
+      id: json['id'].toString(),
+      patientId: json['patient_id'].toString(),
       name: json['name'] as String,
       tradeName: json['trade_name'] as String?,
       activeIngredient: json['active_ingredient'] as String?,
       form: json['form'] as String? ?? 'قرص',
       strength: json['strength'] as String?,
-      stockCount: json['stock_count'] as int? ?? 0,
-      alertThresholdDays: json['alert_threshold_days'] as int? ?? 5,
-      expiryDate: json['expiry_date'] as String?,
+      stockCount: (json['stock_count'] as num?)?.toInt() ?? 0,
+      alertThresholdDays: (json['alert_threshold_days'] as num?)?.toInt() ?? 5,
+      expiryDate: json['expiry_date']?.toString(),
       isActive: json['is_active'] as bool? ?? true,
       schedules: rawSchedules
-          .map((e) => ScheduleModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => ScheduleModel.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList(),
     );
   }
@@ -209,16 +211,18 @@ class TodayDoseModel {
   });
 
   factory TodayDoseModel.fromJson(Map<String, dynamic> json) {
+    final rawTime = json['time_of_day'] as String;
+    final timeOfDay = rawTime.length >= 5 ? rawTime.substring(0, 5) : rawTime;
     return TodayDoseModel(
-      scheduleId: json['schedule_id'] as String,
-      medicationId: json['medication_id'] as String,
+      scheduleId: json['schedule_id'].toString(),
+      medicationId: json['medication_id'].toString(),
       medicationName: json['medication_name'] as String,
-      timeOfDay: json['time_of_day'] as String,
-      doseAmount: (json['dose_amount'] as num).toDouble(),
-      mealRelation: json['meal_relation'] as String,
+      timeOfDay: timeOfDay,
+      doseAmount: (json['dose_amount'] as num?)?.toDouble() ?? 1.0,
+      mealRelation: json['meal_relation'] as String? ?? 'after_meal',
       instructionsAr: json['instructions_ar'] as String?,
-      status: json['status'] as String,
-      intakeLogId: json['intake_log_id'] as String?,
+      status: json['status'] as String? ?? 'pending',
+      intakeLogId: json['intake_log_id']?.toString(),
       actualTime: json['actual_time'] != null
           ? DateTime.parse(json['actual_time'] as String)
           : null,
@@ -235,6 +239,20 @@ class TodayDoseModel {
   final String status;
   final String? intakeLogId;
   final DateTime? actualTime;
+
+  Map<String, dynamic> toJson() => {
+        'schedule_id': scheduleId,
+        'medication_id': medicationId,
+        'medication_name': medicationName,
+        'time_of_day': timeOfDay,
+        'dose_amount': doseAmount,
+        'meal_relation': mealRelation,
+        if (instructionsAr != null) 'instructions_ar': instructionsAr,
+        'status': status,
+        if (intakeLogId != null) 'intake_log_id': intakeLogId,
+        if (actualTime != null)
+          'actual_time': actualTime!.toUtc().toIso8601String(),
+      };
 
   TodayDoseModel copyWith({
     String? status,
@@ -261,6 +279,7 @@ class IntakeLogCreateInput {
     required this.clientUuid,
     required this.scheduleId,
     required this.scheduledTime,
+    this.patientId,
     this.actualTime,
     this.status = 'taken',
     this.reason,
@@ -270,6 +289,7 @@ class IntakeLogCreateInput {
   final String clientUuid;
   final String scheduleId;
   final DateTime scheduledTime;
+  final String? patientId;
   final DateTime? actualTime;
   final String status;
   final String? reason;
@@ -279,6 +299,7 @@ class IntakeLogCreateInput {
         'client_uuid': clientUuid,
         'schedule_id': scheduleId,
         'scheduled_time': scheduledTime.toUtc().toIso8601String(),
+        if (patientId != null) 'patient_id': patientId,
         if (actualTime != null)
           'actual_time': actualTime!.toUtc().toIso8601String(),
         'status': status,
@@ -302,15 +323,15 @@ class IntakeLogModel {
 
   factory IntakeLogModel.fromJson(Map<String, dynamic> json) {
     return IntakeLogModel(
-      id: json['id'] as String,
-      clientUuid: json['client_uuid'] as String,
-      scheduleId: json['schedule_id'] as String,
-      patientId: json['patient_id'] as String,
+      id: json['id'].toString(),
+      clientUuid: json['client_uuid'].toString(),
+      scheduleId: json['schedule_id'].toString(),
+      patientId: json['patient_id'].toString(),
       scheduledTime: DateTime.parse(json['scheduled_time'] as String),
       actualTime: json['actual_time'] != null
           ? DateTime.parse(json['actual_time'] as String)
           : null,
-      status: json['status'] as String,
+      status: json['status'] as String? ?? 'taken',
       reason: json['reason'] as String?,
       loggedOffline: json['logged_offline'] as bool? ?? false,
     );
@@ -325,4 +346,17 @@ class IntakeLogModel {
   final String status;
   final String? reason;
   final bool loggedOffline;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'client_uuid': clientUuid,
+        'schedule_id': scheduleId,
+        'patient_id': patientId,
+        'scheduled_time': scheduledTime.toUtc().toIso8601String(),
+        if (actualTime != null)
+          'actual_time': actualTime!.toUtc().toIso8601String(),
+        'status': status,
+        if (reason != null) 'reason': reason,
+        'logged_offline': loggedOffline,
+      };
 }

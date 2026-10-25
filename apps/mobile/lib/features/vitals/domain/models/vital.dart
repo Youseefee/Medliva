@@ -14,14 +14,14 @@ class VitalReadingModel {
 
   factory VitalReadingModel.fromJson(Map<String, dynamic> json) {
     return VitalReadingModel(
-      id: json['id'] as String,
-      clientUuid: json['client_uuid'] as String?,
-      patientId: json['patient_id'] as String,
+      id: json['id'].toString(),
+      clientUuid: json['client_uuid']?.toString(),
+      patientId: json['patient_id'].toString(),
       type: json['type'] as String,
       valuePrimary: (json['value_primary'] as num).toDouble(),
       valueSecondary: (json['value_secondary'] as num?)?.toDouble(),
       mealContext: json['meal_context'] as String?,
-      band: json['band'] as String,
+      band: json['band'] as String? ?? 'normal',
       rawTranscript: json['raw_transcript'] as String?,
       recordedAt: DateTime.parse(json['recorded_at'] as String),
     );
@@ -37,6 +37,19 @@ class VitalReadingModel {
   final String band;
   final String? rawTranscript;
   final DateTime recordedAt;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        if (clientUuid != null) 'client_uuid': clientUuid,
+        'patient_id': patientId,
+        'type': type,
+        'value_primary': valuePrimary,
+        if (valueSecondary != null) 'value_secondary': valueSecondary,
+        if (mealContext != null) 'meal_context': mealContext,
+        'band': band,
+        if (rawTranscript != null) 'raw_transcript': rawTranscript,
+        'recorded_at': recordedAt.toIso8601String(),
+      };
 }
 
 class VitalCreateInput {
