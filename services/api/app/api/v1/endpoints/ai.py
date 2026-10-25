@@ -1,3 +1,4 @@
+import re
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, UploadFile
@@ -10,13 +11,33 @@ from app.db.session import get_db
 from app.models.medication import DrugCatalog
 from app.models.user import User
 from app.schemas.prescription import ExtractedDrugOut, PrescriptionScanResponse
-from app.services.ai_service import match_drug_in_catalog, scan_prescription_text
+from app.schemas.vitals import VoiceVitalsRequest, VoiceVitalsResponse
+from app.services.ai_service import (
+    match_drug_in_catalog,
+    parse_voice_vitals,
+    scan_prescription_text,
+)
 from app.services.gemini_vision import (
     extract_medications_from_image,
     looks_like_image,
 )
 
 router = APIRouter(prefix="/ai", tags=["ai"])
+
+
+def _parse_dosage_mg(val: Any) -> float | None:
+    if val is None:
+        return None
+    if isinstance(val, (int, float)):
+        return float(val)
+    if isinstance(val, str):
+        digits = re.findall(r"\d+(?:\.\d+)?", val)
+        if digits:
+            try:
+                return float(digits[0])
+            except ValueError:
+                return None
+    return None
 
 
 def _text_hint(raw_bytes: bytes, filename: str | None) -> str:
@@ -82,11 +103,13 @@ async def scan_prescription(
     output_items = []
     for item in extracted_items:
         match, conf = match_drug_in_catalog(item.get("drug_trade_name", ""), catalog_dicts)
-        confidence = conf if conf > 0.5 else item.get("confidence_score", 0.0)
+        default_conf = 0.90 if source == "gemini_vision" else 0.5
+        confidence = conf if conf > 0.5 else item.get("confidence_score", default_conf)
+        dosage = _parse_dosage_mg(item.get("dosage_mg"))
         output_items.append(
             ExtractedDrugOut(
                 drug_trade_name=(match["trade_name"] if match else item.get("drug_trade_name", "")),
-                dosage_mg=item.get("dosage_mg"),
+                dosage_mg=dosage,
                 frequency_per_day=item.get("frequency_per_day", 1),
                 meal_relation=item.get("meal_relation", "after_meal"),
                 times=item.get("times", []),
@@ -106,4 +129,21 @@ async def scan_prescription(
         medications=output_items,
         confidence=round(overall_confidence, 2),
         source=source,
+    )
+
+
+@router.post("/parse-voice-vitals", response_model=VoiceVitalsResponse)
+async def parse_voice_vitals_endpoint(
+    payload: VoiceVitalsRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> VoiceVitalsResponse:
+    result = parse_voice_vitals(payload.transcript)
+    return VoiceVitalsResponse(
+        transcript=result["transcript"],
+        type=result["type"],
+        value_primary=result["value_primary"],
+        value_secondary=result["value_secondary"],
+        meal_context=result["meal_context"],
+        band=result["band"],
+        message_ar=result["message_ar"],
     )

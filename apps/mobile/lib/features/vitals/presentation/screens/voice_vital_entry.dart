@@ -18,19 +18,23 @@ class DeviceSpeechCaptureService implements SpeechCaptureService {
 
   @override
   Future<String?> captureTranscript({required String localeId}) async {
-    final available = await _speech.initialize();
-    if (!available) return null;
+    try {
+      final available = await _speech.initialize();
+      if (!available) return null;
 
-    var captured = '';
-    await _speech.listen(
-      listenOptions: SpeechListenOptions(localeId: localeId),
-      onResult: (result) {
-        captured = result.recognizedWords;
-      },
-    );
-    await Future<void>.delayed(const Duration(seconds: 3));
-    await _speech.stop();
-    return captured.trim().isEmpty ? null : captured.trim();
+      var captured = '';
+      await _speech.listen(
+        listenOptions: SpeechListenOptions(localeId: localeId),
+        onResult: (result) {
+          captured = result.recognizedWords;
+        },
+      );
+      await Future<void>.delayed(const Duration(seconds: 3));
+      await _speech.stop();
+      return captured.trim().isEmpty ? null : captured.trim();
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -97,6 +101,14 @@ class _VoiceVitalConfirmDialogState
           );
       if (!mounted) return;
       Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -179,20 +191,41 @@ Future<void> startVoiceVitalEntryFlow({
   required BuildContext context,
   required WidgetRef ref,
 }) async {
-  final locale = Localizations.localeOf(context).languageCode;
-  final localeId = locale == 'en' ? 'en_US' : 'ar_EG';
-  final speechService = ref.read(speechCaptureServiceProvider);
-  final transcript = await speechService.captureTranscript(localeId: localeId);
-  if (transcript == null || transcript.isEmpty) return;
+  try {
+    final locale = Localizations.localeOf(context).languageCode;
+    final localeId = locale == 'en' ? 'en_US' : 'ar_EG';
+    final speechService = ref.read(speechCaptureServiceProvider);
+    final transcript = await speechService.captureTranscript(localeId: localeId);
+    if (!context.mounted) return;
+    if (transcript == null || transcript.isEmpty) {
+      final l10n = AppLocalizations.of(context);
+      if (l10n != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.voiceVitalSubtitle),
+          ),
+        );
+      }
+      return;
+    }
 
-  final repo = ref.read(vitalsRepositoryProvider);
-  final parsed = await repo.parseVoiceVitals(transcript);
-  if (!context.mounted) return;
+    final repo = ref.read(vitalsRepositoryProvider);
+    final parsed = await repo.parseVoiceVitals(transcript);
+    if (!context.mounted) return;
 
-  await showDialog<bool>(
-    context: context,
-    builder: (_) => VoiceVitalConfirmDialog(parseResult: parsed),
-  );
+    await showDialog<bool>(
+      context: context,
+      builder: (_) => VoiceVitalConfirmDialog(parseResult: parsed),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(e.toString()),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+  }
 }
 
 class VoiceVitalsScreen extends ConsumerStatefulWidget {

@@ -271,7 +271,10 @@ class _DoctorReportScreenState extends ConsumerState<DoctorReportScreen> {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${summary.activeMedications.length} أدوية حالية • ${summary.vitalsHistory.length} قراءات حيوية',
+                                      l10n.reportActiveMedsVitalsSummary(
+                                        summary.activeMedications.length,
+                                        summary.vitalsHistory.length,
+                                      ),
                                       style: theme.textTheme.bodyMedium,
                                     ),
                                   ],

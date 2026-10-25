@@ -190,9 +190,7 @@ class MedicationListScreen extends ConsumerWidget {
                   : isMedStock
                       ? const Color(0xFFB45309)
                       : const Color(0xFF2E7D32);
-              final times = med.schedules.isNotEmpty
-                  ? med.schedules.map((s) => s.timeOfDay).toList()
-                  : const ['08:00 صباحاً'];
+              final times = med.schedules.map((s) => s.timeOfDay).toList();
               final freqLabel = med.schedules.length >= 2
                   ? l10n.twiceDaily
                   : l10n.onceDaily;

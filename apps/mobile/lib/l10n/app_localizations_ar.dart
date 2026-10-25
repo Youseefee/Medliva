@@ -804,4 +804,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get doseFrequencyTwice => 'مرتين يومياً';
+
+  @override
+  String timeAt(String time) {
+    return 'الساعة $time';
+  }
+
+  @override
+  String reportActiveMedsVitalsSummary(int meds, int vitals) {
+    return '$meds أدوية حالية • $vitals قراءات حيوية';
+  }
+
+  @override
+  String get defaultSampleTime => '8:00 صباحاً';
+
+  @override
+  String get defaultSampleVitalTime => '7:30 صباحاً';
+
+  @override
+  String get defaultSampleMedication => 'أملوديبين 5 مجم';
 }

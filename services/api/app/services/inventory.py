@@ -1,5 +1,5 @@
 import urllib.parse
-from datetime import date, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from app.models.medication import Medication, Schedule
@@ -13,7 +13,7 @@ def calculate_medication_forecast(
 
     days_remaining = int(medication.stock_count / daily_dose) if daily_dose > 0 else 999
 
-    today = date.today()
+    today = datetime.now(UTC).date()
     is_low_stock = days_remaining <= medication.alert_threshold_days
     is_expired = bool(medication.expiry_date and medication.expiry_date < today)
     is_expiring_soon = bool(

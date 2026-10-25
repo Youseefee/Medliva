@@ -61,17 +61,26 @@ def extract_json_array(raw_text: str) -> list[dict[str, Any]]:
 
     start = cleaned.find("[")
     end = cleaned.rfind("]")
-    if start == -1 or end == -1:
-        return []
+    if start != -1 and end != -1 and end > start:
+        try:
+            parsed = json.loads(cleaned[start : end + 1])
+            if isinstance(parsed, list):
+                return [item for item in parsed if isinstance(item, dict)]
+        except json.JSONDecodeError:
+            pass
 
-    try:
-        parsed = json.loads(cleaned[start : end + 1])
-    except json.JSONDecodeError:
-        return []
+    # Tolerates single object responses: { "drug_trade_name": "..." }
+    start_obj = cleaned.find("{")
+    end_obj = cleaned.rfind("}")
+    if start_obj != -1 and end_obj != -1 and end_obj > start_obj:
+        try:
+            parsed_obj = json.loads(cleaned[start_obj : end_obj + 1])
+            if isinstance(parsed_obj, dict) and "drug_trade_name" in parsed_obj:
+                return [parsed_obj]
+        except json.JSONDecodeError:
+            pass
 
-    if not isinstance(parsed, list):
-        return []
-    return [item for item in parsed if isinstance(item, dict)]
+    return []
 
 
 async def extract_medications_from_image(

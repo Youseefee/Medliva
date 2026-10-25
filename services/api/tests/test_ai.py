@@ -121,6 +121,73 @@ def test_extract_json_array_handles_markdown_fences():
     assert extract_json_array("[1, 2]") == []
 
 
+def test_extract_json_array_handles_single_object():
+    raw = '```json\n{"drug_trade_name": "Glucophage 500mg", "dosage_mg": 500}\n```'
+    extracted = extract_json_array(raw)
+    assert len(extracted) == 1
+    assert extracted[0]["drug_trade_name"] == "Glucophage 500mg"
+
+
+@pytest.mark.asyncio
+async def test_scan_prescription_coerces_string_dosage(
+    client: AsyncClient, user_factory, monkeypatch: pytest.MonkeyPatch
+):
+    from app.api.v1.endpoints import ai as ai_endpoint
+
+    async def fake_vision_string_dose(image_bytes: bytes, api_key: str, **kwargs):
+        return [
+            {
+                "drug_trade_name": "Glucophage 500mg",
+                "dosage_mg": "500mg",
+                "frequency_per_day": 2,
+                "meal_relation": "after_meal",
+                "times": ["08:30", "20:30"],
+                "inventory_pills": 30,
+            }
+        ]
+
+    monkeypatch.setattr(ai_endpoint, "extract_medications_from_image", fake_vision_string_dose)
+    monkeypatch.setattr(ai_endpoint, "get_settings", lambda: _settings_with_gemini_key())
+
+    patient = await user_factory(phone="+201011100055", name="مريض جرعة نصية")
+    headers = {"Authorization": f"Bearer {patient.id}"}
+
+    files = {"file": ("rx.jpg", b"\xff\xd8\xff\xe0not-a-real-jpeg", "image/jpeg")}
+    res = await client.post("/api/v1/ai/scan-prescription", headers=headers, files=files)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["source"] == "gemini_vision"
+    assert data["medications"][0]["dosage_mg"] == 500.0
+
+
+@pytest.mark.asyncio
+async def test_parse_voice_vitals_eastern_arabic_and_phrases(client: AsyncClient, user_factory):
+    patient = await user_factory(phone="+201011100066", name="مريض صوتي")
+    headers = {"Authorization": f"Bearer {patient.id}"}
+
+    # Eastern Arabic numerals: ١٢٠ على ٨٠
+    res = await client.post(
+        "/api/v1/ai/parse-voice-vitals",
+        json={"transcript": "الضغط ١٢٠ على ٨٠"},
+        headers=headers,
+    )
+    assert res.status_code == 200
+    assert res.json()["value_primary"] == 120.0
+    assert res.json()["value_secondary"] == 80.0
+    assert res.json()["band"] == "normal"
+
+    # Egyptian spoken words: الضغط مية وخمسة وتلاتين على خمسة وتمانين
+    res2 = await client.post(
+        "/api/v1/ai/parse-voice-vitals",
+        json={"transcript": "الضغط مية وخمسة وتلاتين على خمسة وتمانين"},
+        headers=headers,
+    )
+    assert res2.status_code == 200
+    assert res2.json()["value_primary"] == 135.0
+    assert res2.json()["value_secondary"] == 85.0
+    assert res2.json()["band"] == "borderline"
+
+
 class _Settings:
     gemini_api_key = "test-gemini-key"
 

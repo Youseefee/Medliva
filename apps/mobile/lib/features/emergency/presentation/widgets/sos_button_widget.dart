@@ -12,16 +12,39 @@ class GeolocatorSosLocationService implements SosLocationService {
   @override
   Future<({double lat, double lng})?> tryGetCoordinates() async {
     try {
-      final permission = await Geolocator.checkPermission();
+      final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!isServiceEnabled) {
+        return await _tryGetLastKnown();
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
       if (permission == LocationPermission.always ||
           permission == LocationPermission.whileInUse) {
-        final pos = await Geolocator.getCurrentPosition();
+        final pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            timeLimit: Duration(seconds: 4),
+          ),
+        );
         return (lat: pos.latitude, lng: pos.longitude);
       }
-      return null;
+      return await _tryGetLastKnown();
     } catch (_) {
-      return null;
+      return await _tryGetLastKnown();
     }
+  }
+
+  Future<({double lat, double lng})?> _tryGetLastKnown() async {
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) {
+        return (lat: last.latitude, lng: last.longitude);
+      }
+    } catch (_) {}
+    return null;
   }
 }
 
@@ -83,6 +106,14 @@ class _SosButtonWidgetState extends ConsumerState<SosButtonWidget> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.sosSentMessage)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
     } finally {
       if (mounted) {

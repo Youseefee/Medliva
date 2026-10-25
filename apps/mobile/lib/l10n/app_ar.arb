@@ -414,5 +414,27 @@
   "scanNoMedicationsFound": "لم يتم التعرف على أي دواء في الصورة",
   "scanNoMedicationsFoundHint": "جرّب التقاط صورة أوضح للعلبة أو الروشتة",
   "doseFrequencyOnce": "مرة واحدة يومياً",
-  "doseFrequencyTwice": "مرتين يومياً"
+  "doseFrequencyTwice": "مرتين يومياً",
+  "timeAt": "الساعة {time}",
+  "@timeAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "reportActiveMedsVitalsSummary": "{meds} أدوية حالية • {vitals} قراءات حيوية",
+  "@reportActiveMedsVitalsSummary": {
+    "placeholders": {
+      "meds": {
+        "type": "int"
+      },
+      "vitals": {
+        "type": "int"
+      }
+    }
+  },
+  "defaultSampleTime": "8:00 صباحاً",
+  "defaultSampleVitalTime": "7:30 صباحاً",
+  "defaultSampleMedication": "أملوديبين 5 مجم"
 }

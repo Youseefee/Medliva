@@ -21,15 +21,21 @@ class SecureOfflineQueueStore implements OfflineQueueStore {
 
   @override
   Future<List<Map<String, dynamic>>> readItems() async {
-    final raw = await _storage.read(key: _queueKey);
-    if (raw == null || raw.isEmpty) return [];
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    try {
+      final raw = await _storage.read(key: _queueKey);
+      if (raw == null || raw.isEmpty) return [];
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   @override
   Future<void> writeItems(List<Map<String, dynamic>> items) async {
-    await _storage.write(key: _queueKey, value: jsonEncode(items));
+    try {
+      await _storage.write(key: _queueKey, value: jsonEncode(items));
+    } catch (_) {}
   }
 }
 

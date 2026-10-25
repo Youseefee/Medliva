@@ -47,15 +47,19 @@ jobs:
           path: apps/mobile/build/app/outputs/flutter-apk/Medliva-v1.0.0.apk
           if-no-files-found: error
       - name: Publish APK to GitHub Releases (latest)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0-latest
-          name: "Medliva Android APK (Latest Release)"
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.0.0-latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/v') && format('Medliva Android APK ({0})', github.ref_name) || 'Medliva Android APK (Latest Release)' }}
           body: |
-            ### 📱 Medliva Android Application (MVP Release)
-            - **Direct APK Download:** Download `Medliva-v1.0.0.apk` below and install it on your Android device.
+            ### 📱 Medliva Android Application (MVP Release v1.0.0)
+
+            - **Direct APK Download:** Download `Medliva-v1.0.0.apk` below and install it directly on your Android device.
+            - **Download Link:** https://github.com/Youseefee/Medliva/releases/download/${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v1.0.0-latest' }}/Medliva-v1.0.0.apk
             - **Commit:** `${{ github.sha }}`
+            - **Channel:** Flutter Stable
+            - **Signed:** Release APK signed for instant testing & installation.
           files: apps/mobile/build/app/outputs/flutter-apk/Medliva-v1.0.0.apk
           prerelease: false
           make_latest: true

@@ -22,7 +22,7 @@ import asyncio
 import json
 import sys
 import uuid
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -157,7 +157,7 @@ async def _seed_medications(
                 strength=drug.strength,
                 stock_count=DEMO_STOCK.get(trade_name, 30),
                 alert_threshold_days=5,
-                expiry_date=date.today() + timedelta(days=45),
+                expiry_date=datetime.now(UTC).date() + timedelta(days=45),
                 is_active=True,
             )
             db.add(medication)
@@ -183,7 +183,7 @@ async def _seed_medications(
                     days_mask=127,
                     dose_amount=1.0,
                     meal_relation=meal_relation,
-                    start_date=date.today() - timedelta(days=30),
+                    start_date=datetime.now(UTC).date() - timedelta(days=30),
                     is_active=True,
                 )
                 db.add(schedule)
@@ -289,7 +289,7 @@ async def _seed_intake_logs(
 ) -> int:
     """Create a believable adherence history for the last 7 days."""
     created = 0
-    today = date.today()
+    today = datetime.now(UTC).date()
 
     for offset in range(1, days + 1):
         day = today - timedelta(days=offset)

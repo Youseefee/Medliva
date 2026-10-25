@@ -1,8 +1,8 @@
 import uuid
-from datetime import UTC, date, datetime, time
+from datetime import UTC, datetime, time
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -301,6 +301,7 @@ async def get_today_doses(
     patient_id: uuid.UUID,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
+    now: Annotated[datetime | None, Query()] = None,
 ) -> list[TodayDoseOut]:
     await check_patient_access(patient_id, current_user, db)
 
@@ -322,7 +323,11 @@ async def get_today_doses(
     sched_res = await db.execute(sched_stmt)
     schedules = sched_res.scalars().all()
 
-    today_date = date.today()
+    ref_now = now or datetime.now(UTC)
+    if ref_now.tzinfo is None:
+        ref_now = ref_now.replace(tzinfo=UTC)
+
+    today_date = ref_now.date()
     start_of_today = datetime.combine(today_date, time.min).replace(tzinfo=UTC)
     end_of_today = datetime.combine(today_date, time.max).replace(tzinfo=UTC)
 

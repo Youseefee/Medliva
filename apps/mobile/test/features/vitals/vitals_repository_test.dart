@@ -252,6 +252,25 @@ void main() {
       expect(parsed.valueSecondary, 85.0);
       expect(parsed.band, 'borderline');
     });
+
+    test('parseVoiceVitalsLocally handles Egyptian spoken numbers and meal contexts', () {
+      final bp = VitalsRepository.parseVoiceVitalsLocally('الضغط مية وعشرين على تمانين');
+      expect(bp.type, 'bp');
+      expect(bp.valuePrimary, 120.0);
+      expect(bp.valueSecondary, 80.0);
+      expect(bp.band, 'normal');
+
+      final glucose = VitalsRepository.parseVoiceVitalsLocally('سكر صايم مية وعشرين');
+      expect(glucose.type, 'glucose');
+      expect(glucose.valuePrimary, 120.0);
+      expect(glucose.mealContext, 'fasting');
+      expect(glucose.band, 'borderline');
+
+      final pulse = VitalsRepository.parseVoiceVitalsLocally('النبض تمانين');
+      expect(pulse.type, 'pulse');
+      expect(pulse.valuePrimary, 80.0);
+      expect(pulse.band, 'normal');
+    });
   });
 
   group('VitalsRepository Triage Logic', () {

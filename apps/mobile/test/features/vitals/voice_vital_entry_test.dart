@@ -110,4 +110,40 @@ void main() {
     verify(() => repository.createVital('patient-1', any())).called(1);
     expect(find.byKey(const ValueKey('vital_card_vital-voice-1')), findsOneWidget);
   });
+
+  testWidgets(
+      'Voice entry gracefully handles speech capture returning null',
+      (tester) async {
+    when(() => repository.listVitals('patient-1'))
+        .thenAnswer((_) async => const []);
+    when(
+      () => speechService.captureTranscript(
+        localeId: any(named: 'localeId'),
+      ),
+    ).thenAnswer((_) async => null);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentPatientIdProvider.overrideWithValue('patient-1'),
+          vitalsRepositoryProvider.overrideWithValue(repository),
+          speechCaptureServiceProvider.overrideWithValue(speechService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: VitalsScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('voice_vital_btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('تأكيد القراءة الصوتية'), findsNothing);
+    verifyNever(() => repository.createVital(any(), any()));
+  });
 }

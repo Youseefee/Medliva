@@ -106,7 +106,15 @@ async def list_patient_alerts(
     derived = [_missed_dose_alert(patient_id, dose) for dose in missed_doses]
 
     alerts = [*stored, *derived]
-    alerts.sort(key=lambda alert: (alert.created_at, alert.id), reverse=True)
+    alerts.sort(
+        key=lambda alert: (
+            alert.created_at.replace(tzinfo=UTC)
+            if alert.created_at.tzinfo is None
+            else alert.created_at,
+            alert.id,
+        ),
+        reverse=True,
+    )
     return alerts[:limit]
 
 

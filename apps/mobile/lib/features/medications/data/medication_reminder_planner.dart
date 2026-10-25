@@ -75,7 +75,7 @@ class MedicationReminderPlanner {
         minute,
       );
 
-      final baseId = (dose.scheduleId.hashCode.abs() % 100000) * 10;
+      final baseId = ((dose.scheduleId.hashCode & 0x7FFFFFFF) % 100000) * 10;
 
       for (var attempt = 0; attempt <= maxRepeats; attempt++) {
         final scheduledAt = baseTime.add(repeatInterval * attempt);
@@ -95,7 +95,7 @@ class MedicationReminderPlanner {
   }
 
   List<int> notificationIdsForSchedule(String scheduleId) {
-    final baseId = (scheduleId.hashCode.abs() % 100000) * 10;
+    final baseId = ((scheduleId.hashCode & 0x7FFFFFFF) % 100000) * 10;
     return [
       for (var attempt = 0; attempt <= maxRepeats; attempt++) baseId + attempt,
     ];
@@ -121,11 +121,30 @@ class LocalReminderService {
   Future<void> initialize() async {
     try {
       tz_data.initializeTimeZones();
+      try {
+        final offset = DateTime.now().timeZoneOffset;
+        for (final loc in tz.timeZoneDatabase.locations.values) {
+          if (loc.currentTimeZone.offset == offset) {
+            tz.setLocalLocation(loc);
+            break;
+          }
+        }
+      } catch (_) {}
+
       const androidSettings =
           AndroidInitializationSettings('@mipmap/ic_launcher');
-      const settings = InitializationSettings(android: androidSettings);
+      const darwinSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const settings = InitializationSettings(
+        android: androidSettings,
+        iOS: darwinSettings,
+        macOS: darwinSettings,
+      );
       await _plugin.initialize(settings: settings);
-      await _requestAndroidPermissions();
+      await _requestPermissions();
       _initialized = true;
     } catch (_) {
       // Reminders are a convenience, not a requirement: if the platform
@@ -134,12 +153,18 @@ class LocalReminderService {
     }
   }
 
-  Future<void> _requestAndroidPermissions() async {
+  Future<void> _requestPermissions() async {
     final android = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
-    if (android == null) return;
-    await android.requestNotificationsPermission();
-    await android.requestExactAlarmsPermission();
+    if (android != null) {
+      await android.requestNotificationsPermission();
+      await android.requestExactAlarmsPermission();
+    }
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    if (ios != null) {
+      await ios.requestPermissions(alert: true, badge: true, sound: true);
+    }
   }
 
   Future<void> rescheduleForToday(

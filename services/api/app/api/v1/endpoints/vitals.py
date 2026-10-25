@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Annotated
 
@@ -13,10 +14,7 @@ from app.models.vitals import VitalBand, VitalsLog, VitalType
 from app.schemas.vitals import (
     VitalsCreate,
     VitalsOut,
-    VoiceVitalsRequest,
-    VoiceVitalsResponse,
 )
-from app.services.ai_service import parse_voice_vitals
 from app.services.triage import triage_bp, triage_glucose, triage_pulse
 
 router = APIRouter(tags=["vitals"])
@@ -88,14 +86,16 @@ async def create_vital(
 
     # If critical, trigger Alert
     if band == "critical":
+        alert_payload = {
+            "type": vital_type.value,
+            "value_primary": payload.value_primary,
+            "value_secondary": payload.value_secondary,
+        }
         alert = Alert(
             patient_id=patient_id,
             type=AlertType.CRITICAL_VITAL,
             tier=2,
-            payload_json=(
-                f'{{"type": "{vital_type.value}", "value_primary": {payload.value_primary}, '
-                f'"value_secondary": {payload.value_secondary}}}'
-            ),
+            payload_json=json.dumps(alert_payload, ensure_ascii=False),
         )
         db.add(alert)
 
@@ -113,21 +113,4 @@ async def create_vital(
         band=vlog.band.value,
         raw_transcript=vlog.raw_transcript,
         recorded_at=vlog.recorded_at,
-    )
-
-
-@router.post("/ai/parse-voice-vitals", response_model=VoiceVitalsResponse)
-async def parse_voice_vitals_endpoint(
-    payload: VoiceVitalsRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> VoiceVitalsResponse:
-    result = parse_voice_vitals(payload.transcript)
-    return VoiceVitalsResponse(
-        transcript=result["transcript"],
-        type=result["type"],
-        value_primary=result["value_primary"],
-        value_secondary=result["value_secondary"],
-        meal_context=result["meal_context"],
-        band=result["band"],
-        message_ar=result["message_ar"],
     )

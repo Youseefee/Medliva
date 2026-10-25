@@ -125,26 +125,34 @@ ARABIC_NUMBER_WORDS = {
     "ثلاثمائة": 300,
 }
 
+EASTERN_ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+
 
 def normalize_arabic_spoken_numbers(text: str) -> str:
-    cleaned = text
-    # Replace compound numbers like "مية وخمسة وتلاتين" -> 135
-    # Replace "على" or "فوق" with slash "/"
-    cleaned = re.sub(r"\s+(على|فوق|من)\s+", " / ", cleaned)
+    cleaned = text.translate(EASTERN_ARABIC_DIGITS)
+    # Replace "على" or "فوق" or "من" with slash "/"
+    cleaned = re.sub(r"\s*(?:على|فوق|من)\s*", " / ", cleaned)
 
     # Convert common spoken phrases:
     compound_patterns = [
         ("مية وخمسة وتلاتين", "135"),
+        ("مية وخمسة وثلاثين", "135"),
         ("مية وعشرين", "120"),
         ("مية وتلاتين", "130"),
+        ("مية وثلاثين", "130"),
         ("مية واربعين", "140"),
+        ("مية وأربعين", "140"),
         ("مية وخمسين", "150"),
         ("مية وستين", "160"),
         ("مية وسبعين", "170"),
         ("مية وتمانين", "180"),
+        ("مية وثمانين", "180"),
         ("مية وتسعين", "190"),
+        ("ميتين", "200"),
+        ("مئتين", "200"),
         ("خمسة وتسعين", "95"),
         ("خمسة وتمانين", "85"),
+        ("خمسة وثمانين", "85"),
         ("خمسة وسبعين", "75"),
         ("تسعين", "90"),
         ("تمانين", "80"),
@@ -153,9 +161,13 @@ def normalize_arabic_spoken_numbers(text: str) -> str:
         ("ستين", "60"),
         ("خمسين", "50"),
         ("اربعين", "40"),
+        ("أربعين", "40"),
         ("تلاتين", "30"),
+        ("ثلاثين", "30"),
         ("عشرين", "20"),
         ("مية", "100"),
+        ("مئة", "100"),
+        ("مائة", "100"),
     ]
 
     for pattern, rep in compound_patterns:

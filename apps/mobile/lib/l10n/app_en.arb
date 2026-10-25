@@ -276,35 +276,165 @@
   "alertSosTitle": "Emergency SOS",
   "alertSosBody": "An emergency SOS was triggered",
   "alertSosNote": "Note: {note}",
+  "@alertSosNote": {
+    "placeholders": {
+      "note": {
+        "type": "String"
+      }
+    }
+  },
   "alertCriticalVitalTitle": "A vital reading needs attention",
   "alertVitalReading": "A reading of {value} was recorded",
+  "@alertVitalReading": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "alertLowStockTitle": "Low medication stock",
   "alertLowStockBody": "Stock of ({name}) is running low",
+  "@alertLowStockBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "alertMissedDoseTitle": "Missed dose",
   "alertMissedDoseBody": "The dose of ({name}) was not taken on time",
+  "@alertMissedDoseBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "alertExpiryTitle": "Medication expired",
   "alertExpiryBody": "The medication ({name}) has expired",
+  "@alertExpiryBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "alertGenericBody": "A new alert from Medliva",
   "alertCaregiversNotified": "Caregivers have been notified",
   "timeJustNow": "Just now",
   "timeMinutesAgo": "{count} minutes ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "timeHoursAgo": "{count} hours ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "timeDaysAgo": "{count} days ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "notifDoseBody": "It is time to take ({name})",
+  "@notifDoseBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "notifDoseSub": "Scheduled at {time}",
+  "@notifDoseSub": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "notifLowStockBody": "Stock of ({name}) is running low",
+  "@notifLowStockBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "notifLowStockSub": "{days} days left",
+  "@notifLowStockSub": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "notifHighVitalBody": "A reading of {value} was recorded",
+  "@notifHighVitalBody": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "notifCaregiverMonitorSub": "They monitor your condition daily",
   "notifCaregiversBody": "Caregivers: {names}",
+  "@notifCaregiversBody": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "notifEmptyTitle": "No notifications",
   "notifEmptySub": "New alerts will show up here as soon as they arrive",
   "noEmergencyContacts": "No emergency contacts yet — add one so they can be reached during an emergency",
   "locationCoordinatesLabel": "Location: {lat}, {lng}",
+  "@locationCoordinatesLabel": {
+    "placeholders": {
+      "lat": {
+        "type": "String"
+      },
+      "lng": {
+        "type": "String"
+      }
+    }
+  },
   "locationUnavailable": "Location not detected — contacts will be notified without a location",
   "scanFrameHint": "Place the prescription inside the frame and take the photo",
   "scanNoMedicationsFound": "No medication was recognized in the photo",
   "scanNoMedicationsFoundHint": "Try a clearer photo of the box or the prescription",
   "doseFrequencyOnce": "Once daily",
-  "doseFrequencyTwice": "Twice daily"
+  "doseFrequencyTwice": "Twice daily",
+  "timeAt": "At {time}",
+  "@timeAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "reportActiveMedsVitalsSummary": "{meds} active medication(s) • {vitals} vital reading(s)",
+  "@reportActiveMedsVitalsSummary": {
+    "placeholders": {
+      "meds": {
+        "type": "int"
+      },
+      "vitals": {
+        "type": "int"
+      }
+    }
+  },
+  "defaultSampleTime": "8:00 AM",
+  "defaultSampleVitalTime": "7:30 AM",
+  "defaultSampleMedication": "Amlodipine 5mg"
 }

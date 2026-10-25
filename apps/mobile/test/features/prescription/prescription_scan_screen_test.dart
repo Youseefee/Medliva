@@ -113,4 +113,36 @@ void main() {
     verify(() => medicationRepository.createMedication('patient-1', any()))
         .called(1);
   });
+
+  testWidgets(
+      'PrescriptionScanScreen shows SnackBar when image picking or scanning fails',
+      (tester) async {
+    when(() => imagePicker.pickImage(any()))
+        .thenThrow(Exception('Camera permission denied'));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentPatientIdProvider.overrideWithValue('patient-1'),
+          prescriptionImagePickerProvider.overrideWithValue(imagePicker),
+          prescriptionRepositoryProvider
+              .overrideWithValue(prescriptionRepository),
+          medicationRepositoryProvider.overrideWithValue(medicationRepository),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: PrescriptionScanScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('scan_camera_btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exception: Camera permission denied'), findsOneWidget);
+  });
 }

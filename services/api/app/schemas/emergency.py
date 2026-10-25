@@ -1,6 +1,6 @@
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -55,15 +55,27 @@ class AlertOut(BaseModel):
             if isinstance(decoded, dict):
                 payload = decoded
 
+        created_at = data.created_at
+        if created_at is not None and created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=UTC)
+
+        sent_at = data.sent_at
+        if sent_at is not None and sent_at.tzinfo is None:
+            sent_at = sent_at.replace(tzinfo=UTC)
+
+        ack_at = data.acknowledged_at
+        if ack_at is not None and ack_at.tzinfo is None:
+            ack_at = ack_at.replace(tzinfo=UTC)
+
         return {
             "id": data.id,
             "patient_id": data.patient_id,
             "type": data.type,
             "tier": data.tier,
             "payload": payload,
-            "sent_at": data.sent_at,
-            "acknowledged_at": data.acknowledged_at,
-            "created_at": data.created_at,
+            "sent_at": sent_at or created_at,
+            "acknowledged_at": ack_at,
+            "created_at": created_at,
         }
 
 

@@ -810,4 +810,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get doseFrequencyTwice => 'Twice daily';
+
+  @override
+  String timeAt(String time) {
+    return 'At $time';
+  }
+
+  @override
+  String reportActiveMedsVitalsSummary(int meds, int vitals) {
+    return '$meds active medication(s) • $vitals vital reading(s)';
+  }
+
+  @override
+  String get defaultSampleTime => '8:00 AM';
+
+  @override
+  String get defaultSampleVitalTime => '7:30 AM';
+
+  @override
+  String get defaultSampleMedication => 'Amlodipine 5mg';
 }

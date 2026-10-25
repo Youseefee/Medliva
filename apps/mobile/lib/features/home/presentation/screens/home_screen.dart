@@ -35,7 +35,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final authState = ref.watch(authNotifierProvider);
 
     final user = authState.value;
-    final userName = user?.name ?? user?.email ?? user?.phone ?? 'عم أحمد';
+    final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+    final userName = user?.name ??
+        user?.email ??
+        user?.phone ??
+        (isEnglish ? 'Ahmed' : 'عم أحمد');
     final isCaregiver = user?.isCaregiver ?? false;
     final roleName = isCaregiver ? l10n.roleCaregiver : l10n.rolePatient;
     final shellTitle = isCaregiver
@@ -320,7 +324,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          nextDose?.medicationName ?? 'أملوديبين 5 مجم',
+                          nextDose?.medicationName ??
+                              l10n.defaultSampleMedication,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -329,8 +334,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         Text(
                           nextDose != null
-                              ? 'الساعة ${nextDose.timeOfDay}'
-                              : 'الساعة 8:00 صباحاً',
+                              ? l10n.timeAt(nextDose.timeOfDay)
+                              : l10n.timeAt(l10n.defaultSampleTime),
                           style: theme.textTheme.bodySmall,
                         ),
                       ],

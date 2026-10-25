@@ -77,4 +77,40 @@ void main() {
     verify(() => repository.triggerSos(lat: 30.0444, lng: 31.2357)).called(1);
     expect(find.text('تم إرسال نداء الاستغاثة بنجاح'), findsOneWidget);
   });
+
+  testWidgets('SOS button displays error SnackBar when repository throws',
+      (tester) async {
+    when(() => locationService.tryGetCoordinates())
+        .thenAnswer((_) async => null);
+    when(
+      () => repository.triggerSos(
+        lat: any(named: 'lat'),
+        lng: any(named: 'lng'),
+      ),
+    ).thenThrow(Exception('Network error'));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          emergencyRepositoryProvider.overrideWithValue(repository),
+          sosLocationServiceProvider.overrideWithValue(locationService),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: Center(child: SosButtonWidget())),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    await tester.longPress(find.byKey(const ValueKey('sos_trigger_btn')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('sos_confirm_send_btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Exception: Network error'), findsOneWidget);
+  });
 }

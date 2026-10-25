@@ -427,7 +427,7 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${l10n.lastReadingToday} 7:30 صباحاً',
+                        '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
                         style: theme.textTheme.bodySmall,
                       ),
                     ],
@@ -498,7 +498,7 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${l10n.lastReadingToday} 7:30 صباحاً',
+                        '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
                         style: theme.textTheme.bodySmall,
                       ),
                     ],

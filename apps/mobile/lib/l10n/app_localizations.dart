@@ -1567,6 +1567,36 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'مرتين يومياً'**
   String get doseFrequencyTwice;
+
+  /// No description provided for @timeAt.
+  ///
+  /// In ar, this message translates to:
+  /// **'الساعة {time}'**
+  String timeAt(String time);
+
+  /// No description provided for @reportActiveMedsVitalsSummary.
+  ///
+  /// In ar, this message translates to:
+  /// **'{meds} أدوية حالية • {vitals} قراءات حيوية'**
+  String reportActiveMedsVitalsSummary(int meds, int vitals);
+
+  /// No description provided for @defaultSampleTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'8:00 صباحاً'**
+  String get defaultSampleTime;
+
+  /// No description provided for @defaultSampleVitalTime.
+  ///
+  /// In ar, this message translates to:
+  /// **'7:30 صباحاً'**
+  String get defaultSampleVitalTime;
+
+  /// No description provided for @defaultSampleMedication.
+  ///
+  /// In ar, this message translates to:
+  /// **'أملوديبين 5 مجم'**
+  String get defaultSampleMedication;
 }
 
 class _AppLocalizationsDelegate

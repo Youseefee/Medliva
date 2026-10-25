@@ -94,3 +94,25 @@ async def test_vitals_api_endpoints(client: AsyncClient, user_factory):
     data = list_res.json()
     assert len(data) == 1
     assert data[0]["value_primary"] == 140.0
+
+    # 4. Record critical glucose (value_secondary is None) -> creates valid alert
+    crit_res = await client.post(
+        f"/api/v1/patients/{patient_id}/vitals",
+        json={
+            "type": "glucose",
+            "value_primary": 320.0,
+            "meal_context": "fasting",
+        },
+        headers=headers,
+    )
+    assert crit_res.status_code == 201
+    assert crit_res.json()["band"] == "critical"
+
+    alerts_res = await client.get(f"/api/v1/patients/{patient_id}/alerts", headers=headers)
+    assert alerts_res.status_code == 200
+    alerts = alerts_res.json()
+    crit_alert = next((a for a in alerts if a["type"] == "critical_vital"), None)
+    assert crit_alert is not None
+    assert crit_alert["payload"]["type"] == "glucose"
+    assert crit_alert["payload"]["value_primary"] == 320.0
+    assert crit_alert["payload"]["value_secondary"] is None

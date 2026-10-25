@@ -185,11 +185,58 @@ class VitalsRepository {
     return result;
   }
 
+  static String normalizeArabicSpokenNumbers(String input) {
+    var cleaned = normalizeDigits(input);
+    cleaned = cleaned.replaceAll(RegExp(r'\s*(?:على|فوق|من)\s*'), ' / ');
+
+    const compoundPatterns = [
+      ('مية وخمسة وتلاتين', '135'),
+      ('مية وخمسة وثلاثين', '135'),
+      ('مية وعشرين', '120'),
+      ('مية وتلاتين', '130'),
+      ('مية وثلاثين', '130'),
+      ('مية واربعين', '140'),
+      ('مية وأربعين', '140'),
+      ('مية وخمسين', '150'),
+      ('مية وستين', '160'),
+      ('مية وسبعين', '170'),
+      ('مية وتمانين', '180'),
+      ('مية وثمانين', '180'),
+      ('مية وتسعين', '190'),
+      ('ميتين', '200'),
+      ('مئتين', '200'),
+      ('خمسة وتسعين', '95'),
+      ('خمسة وتمانين', '85'),
+      ('خمسة وثمانين', '85'),
+      ('خمسة وسبعين', '75'),
+      ('تسعين', '90'),
+      ('تمانين', '80'),
+      ('ثمانين', '80'),
+      ('سبعين', '70'),
+      ('ستين', '60'),
+      ('خمسين', '50'),
+      ('اربعين', '40'),
+      ('أربعين', '40'),
+      ('تلاتين', '30'),
+      ('ثلاثين', '30'),
+      ('عشرين', '20'),
+      ('عشرة', '10'),
+      ('مية', '100'),
+      ('مئة', '100'),
+      ('مائة', '100'),
+    ];
+
+    for (final pattern in compoundPatterns) {
+      cleaned = cleaned.replaceAll(pattern.$1, pattern.$2);
+    }
+    return cleaned;
+  }
+
   static VoiceVitalsParseResult parseVoiceVitalsLocally(String transcript) {
-    final text = normalizeDigits(transcript.trim());
+    final text = normalizeArabicSpokenNumbers(transcript.trim());
     // BP check: e.g. "120 على 80" or "120 / 80" or "120 80"
     final bpMatch =
-        RegExp(r'(\d{2,3})\s*(?:على|/|-|\s)\s*(\d{2,3})').firstMatch(text);
+        RegExp(r'(\d{2,3})\s*(?:/|-|\s)\s*(\d{2,3})').firstMatch(text);
     if (bpMatch != null &&
         (text.contains('ضغط') ||
             text.contains('bp') ||

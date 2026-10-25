@@ -22,8 +22,9 @@ class DoseReminderScreen extends ConsumerWidget {
         doses.where((d) => d.status == 'pending').firstOrNull ??
         (doses.isNotEmpty ? doses.first : null);
 
-    final medName = activeDose?.medicationName ?? 'أملوديبين 5 مجم';
-    final timeStr = activeDose?.timeOfDay ?? '8:00 صباحاً';
+    final medName =
+        activeDose?.medicationName ?? l10n.defaultSampleMedication;
+    final timeStr = activeDose?.timeOfDay ?? l10n.defaultSampleTime;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -100,7 +101,7 @@ class DoseReminderScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'الساعة $timeStr',
+                l10n.timeAt(timeStr),
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: Colors.grey.shade700,
                 ),

@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import UTC, datetime
 from typing import Annotated
@@ -12,7 +13,7 @@ from app.db.session import get_db
 from app.models.emergency import Alert, AlertType
 from app.models.medication import IntakeLog, IntakeStatus, Medication, Schedule
 from app.models.user import User
-from app.models.vitals import VitalsLog, VitalType
+from app.models.vitals import VitalBand, VitalsLog, VitalType
 from app.schemas.adherence import (
     IntakeLogCreate,
     IntakeLogOut,
@@ -74,9 +75,13 @@ async def log_adherence(
                 patient_id=med.patient_id,
                 type=AlertType.LOW_STOCK,
                 tier=1,
-                payload_json=(
-                    f'{{"medication_id": "{med.id}", "name": "{med.name}", '
-                    f'"stock_count": {med.stock_count}}}'
+                payload_json=json.dumps(
+                    {
+                        "medication_id": str(med.id),
+                        "name": med.name,
+                        "stock_count": med.stock_count,
+                    },
+                    ensure_ascii=False,
                 ),
             )
             db.add(low_alert)
@@ -134,6 +139,21 @@ async def sync_batch(
 
             if status_enum == IntakeStatus.TAKEN:
                 med.stock_count = max(0, int(med.stock_count - sched.dose_amount))
+                if med.stock_count <= med.alert_threshold_days:
+                    low_alert = Alert(
+                        patient_id=med.patient_id,
+                        type=AlertType.LOW_STOCK,
+                        tier=1,
+                        payload_json=json.dumps(
+                            {
+                                "medication_id": str(med.id),
+                                "name": med.name,
+                                "stock_count": med.stock_count,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    )
+                    db.add(low_alert)
 
             synced_uuids.append(item.client_uuid)
 
@@ -167,6 +187,9 @@ async def sync_batch(
             else:
                 band, _ = triage_pulse(p_val)
 
+            rec_at_raw = item.payload.get("recorded_at")
+            rec_at = datetime.fromisoformat(rec_at_raw) if rec_at_raw else datetime.now(UTC)
+
             vlog = VitalsLog(
                 client_uuid=item.client_uuid,
                 patient_id=patient_id,
@@ -174,10 +197,24 @@ async def sync_batch(
                 value_primary=p_val,
                 value_secondary=s_val,
                 meal_context=meal_ctx,
-                band=band,
+                band=VitalBand(band),
                 raw_transcript=item.payload.get("raw_transcript"),
+                recorded_at=rec_at,
             )
             db.add(vlog)
+            if band == "critical":
+                alert_payload = {
+                    "type": vital_type.value,
+                    "value_primary": p_val,
+                    "value_secondary": s_val,
+                }
+                alert = Alert(
+                    patient_id=patient_id,
+                    type=AlertType.CRITICAL_VITAL,
+                    tier=2,
+                    payload_json=json.dumps(alert_payload, ensure_ascii=False),
+                )
+                db.add(alert)
             synced_uuids.append(item.client_uuid)
 
     await db.commit()
