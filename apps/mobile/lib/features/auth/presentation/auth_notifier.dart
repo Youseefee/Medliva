@@ -38,6 +38,12 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
     try {
       return await ref.watch(authRepositoryProvider).getMe();
     } catch (_) {
+      try {
+        final currentUser = ref.read(supabaseClientProvider).auth.currentUser;
+        if (currentUser != null) {
+          return ref.read(authRepositoryProvider).getUserFromAuth(currentUser);
+        }
+      } catch (_) {}
       await ref.read(tokenStorageProvider).clearTokens();
       return null;
     }
@@ -58,7 +64,8 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
         state = const AsyncValue.data(null);
         return false;
       }
-      state = AsyncValue.data(await ref.read(authRepositoryProvider).getMe());
+      final user = await ref.read(authRepositoryProvider).getMe();
+      state = AsyncValue.data(user);
       return true;
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

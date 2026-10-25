@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -28,6 +29,64 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
     _passwordController.dispose();
     _nameController.dispose();
     super.dispose();
+  }
+
+  String _mapAuthError(BuildContext context, Object error) {
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+    final errorStr = error.toString().toLowerCase();
+
+    if (error is AuthException) {
+      final code = error.code?.toLowerCase() ?? '';
+      final msg = error.message.toLowerCase();
+      if (code == 'user_already_exists' ||
+          msg.contains('already registered') ||
+          msg.contains('already in use') ||
+          msg.contains('user already exists')) {
+        return isEn
+            ? 'Email is already registered. Please sign in instead.'
+            : 'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك';
+      }
+      if (code == 'invalid_credentials' ||
+          msg.contains('invalid login credentials') ||
+          msg.contains('invalid credentials') ||
+          msg.contains('invalid email or password')) {
+        return isEn
+            ? 'Invalid email or password.'
+            : 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+      }
+      if (code == 'weak_password' ||
+          msg.contains('password should be at least') ||
+          msg.contains('weak password')) {
+        return isEn
+            ? 'Password must be at least 6 characters.'
+            : 'كلمة المرور يجب ألا تقل عن 6 أحرف';
+      }
+      if (code == 'email_not_confirmed' ||
+          msg.contains('email not confirmed')) {
+        return isEn
+            ? 'Please confirm your email before signing in.'
+            : 'يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إليك';
+      }
+      return error.message;
+    }
+
+    if (error is ApiException) {
+      return error.message;
+    }
+
+    if (errorStr.contains('socketexception') ||
+        errorStr.contains('connection refused') ||
+        errorStr.contains('network is unreachable') ||
+        errorStr.contains('connection closed') ||
+        errorStr.contains('failed host lookup') ||
+        errorStr.contains('connection error') ||
+        errorStr.contains('connecttimeout')) {
+      return isEn
+          ? 'Unable to connect. Please check your internet connection.'
+          : 'تعذر الاتصال، يرجى التحقق من اتصال الإنترنت';
+    }
+
+    return error.toString();
   }
 
   Future<void> _submit() async {
@@ -66,7 +125,7 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
       context.go(user?.isCaregiver == true ? '/caregiver' : '/patient');
     } catch (error) {
       if (!mounted) return;
-      final message = error is AuthException ? error.message : error.toString();
+      final message = _mapAuthError(context, error);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),

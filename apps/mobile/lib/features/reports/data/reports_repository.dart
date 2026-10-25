@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
@@ -91,22 +92,33 @@ class DoctorReportPdfBuilder {
     }
 
     try {
-      // Cairo is downloaded once and cached by the printing package; it is
-      // the only way to render the Arabic names correctly inside the PDF.
-      final base = await PdfGoogleFonts.cairoRegular();
-      final bold = await PdfGoogleFonts.cairoBold();
+      // Cairo is bundled directly in assets for reliable offline rendering.
+      final baseData = await rootBundle.load('assets/fonts/Cairo-Regular.ttf');
+      final boldData = await rootBundle.load('assets/fonts/Cairo-Bold.ttf');
+      final base = pw.Font.ttf(baseData);
+      final bold = pw.Font.ttf(boldData);
       return _ReportFonts(
         base: base,
         bold: bold,
-        supportsArabic: base is pw.TtfFont,
+        supportsArabic: true,
       );
     } catch (_) {
-      // Offline / no font cache: fall back to Helvetica.
-      return const _ReportFonts(
-        base: null,
-        bold: null,
-        supportsArabic: false,
-      );
+      try {
+        final base = await PdfGoogleFonts.cairoRegular();
+        final bold = await PdfGoogleFonts.cairoBold();
+        return _ReportFonts(
+          base: base,
+          bold: bold,
+          supportsArabic: base is pw.TtfFont,
+        );
+      } catch (_) {
+        // Offline / no font cache: fall back to Helvetica.
+        return const _ReportFonts(
+          base: null,
+          bold: null,
+          supportsArabic: false,
+        );
+      }
     }
   }
 

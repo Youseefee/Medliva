@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:medliva/core/config/app_config.dart';
 import 'package:medliva/core/router/app_router.dart';
 import 'package:medliva/core/theme/app_theme.dart';
@@ -10,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     publishableKey: AppConfig.supabasePublishableKey,
@@ -55,6 +57,7 @@ class MedlivaApp extends ConsumerWidget {
       title: 'ميدليفا | Medliva',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
       routerConfig: router,
       locale: locale,
       supportedLocales: AppLocalizations.supportedLocales,
