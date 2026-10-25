@@ -39,8 +39,15 @@ async def get_current_user(
     except httpx.RequestError as exc:
         raise AppError(503, "AUTH_PROVIDER_UNAVAILABLE", "تعذر الاتصال بخدمة تسجيل الدخول") from exc
 
-    if response.status_code == 401:
+    if response.status_code in (401, 403):
+        try:
+            body = response.json()
+            if isinstance(body, dict) and body.get("message") == "Invalid API key":
+                raise AppError(503, "AUTH_NOT_CONFIGURED", "إعدادات المصادقة غير صالحة")
+        except (ValueError, TypeError):
+            pass
         raise AppError(401, "TOKEN_INVALID", "رمز الدخول غير صالح أو منتهي")
+
     if response.status_code != 200:
         raise AppError(503, "AUTH_PROVIDER_UNAVAILABLE", "تعذر التحقق من تسجيل الدخول")
 
@@ -79,6 +86,22 @@ async def get_current_user(
             user = result.scalar_one_or_none()
             if not user:
                 raise AppError(409, "PROFILE_CONFLICT", "تعذر إنشاء ملف الحساب") from None
+    else:
+        auth_email = auth_user.get("email")
+        auth_phone = auth_user.get("phone") or None
+        needs_commit = False
+        if auth_email and user.email != auth_email:
+            user.email = auth_email
+            needs_commit = True
+        if auth_phone and user.phone != auth_phone:
+            user.phone = auth_phone
+            needs_commit = True
+        if needs_commit:
+            try:
+                await db.commit()
+                await db.refresh(user)
+            except IntegrityError:
+                await db.rollback()
 
     return user
 

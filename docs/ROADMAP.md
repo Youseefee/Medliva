@@ -31,7 +31,9 @@
 - [x] SOS
 - [x] Testing + Pilot
 - [x] Alerts feed + مركز الإشعارات + تذكيرات محلية
-- [x] بيانات العرض التجريبية (`services/api/scripts/seed_demo_data.py`)
-- [ ] Deployment (CI/CD + متجر Play) + كتاب + Demo
+- [x] بيانات العرض التجريبية والمحاكاة السريرية (`services/api/scripts/seed_demo_data.py` مع خيارات `--auto-patient` و `--patient-email`)
+- [x] دليل يوم المناقشة وتشغيل Supabase المباشر بدون Docker (Live Demo Runbook مع `--dart-define`)
+- [x] أدوات التقرير الفني والأكاديمي الشامل (`docs/tools/build_academic_pdf.py` لتوليد ReportLab PDF)
+- [ ] Deployment (نشر المتجر الرسمي)
 
-> ملاحظة: بنود الـ Deployment والكتاب غير منفّذة في المستودع؛ كل ما عداها مكتمل ومغطّى باختبارات آلية (30 اختبار API + 49 اختبار موبايل).
+> ملاحظة: نشر التطبيق على متجر Google Play غير مشمول في بيئة التطوير؛ كافة المكونات البرمجية والوظيفية مكتملة بالكامل ومغطاة باختبارات آلية شاملة (34 اختبار API + 49 اختبار موبايل ناجح بنسبة 100%).

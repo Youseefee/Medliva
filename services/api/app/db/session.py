@@ -6,8 +6,11 @@ from app.core.config import get_settings
 
 
 def _engine_kwargs(url: str) -> dict:
-    kwargs: dict = {"pool_pre_ping": True}
-    if url.startswith("postgresql+asyncpg"):
+    kwargs: dict = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
+    if "postgresql" in url:
         # Require TLS, and disable prepared statement caches for Supabase pooler compatibility.
         kwargs["connect_args"] = {
             "ssl": "require",

@@ -2,7 +2,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal, Self
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 API_DIR = Path(__file__).resolve().parents[2]
@@ -30,12 +30,25 @@ class Settings(BaseSettings):
     # Supabase Auth
     supabase_url: str = ""
     supabase_publishable_key: str = ""
+    supabase_anon_key: str = ""
 
     # Optional Gemini API key for real prescription vision OCR
     gemini_api_key: str = ""
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: str) -> str:
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+asyncpg://", 1)
+            if v.startswith("postgresql://") and not v.startswith("postgresql+"):
+                return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
+
     @model_validator(mode="after")
     def validate_production_security(self) -> Self:
+        if not self.supabase_publishable_key and self.supabase_anon_key:
+            self.supabase_publishable_key = self.supabase_anon_key
         if not self.is_prod:
             return self
 

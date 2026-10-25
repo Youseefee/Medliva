@@ -29,5 +29,6 @@ Thumbs.db
 docs/original/
 docs/generated/
 docs/*.docx
+*.pdf
 docs/*.pdf
 docs/*.pptx
