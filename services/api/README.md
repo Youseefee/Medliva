@@ -2,7 +2,7 @@
 
 الواجهة الخلفية (Backend API) لمنصة **Medliva** لإدارة الرعاية الصحية والالتزام الدوائي لكبار السن.
 
-> **ملاحظة معمارية هامة:** يعتمد المشروع كلياً على **سحابة Supabase المباشرة (PostgreSQL 16 + Supabase Auth)** وتشغيل FastAPI عبر أداة `uv` الحديثة، **دون الحاجة لأي حاويات Docker نهائياً**.
+> **ملاحظة معمارية هامة:** يعتمد المشروع كلياً على **سحابة Supabase المباشرة (PostgreSQL 16 + Supabase Auth)** وتشغيل FastAPI عبر أداة `uv` الحديثة. المسار الأساسي لا يحتاج Docker؛ ويوجد بديل محلي اختياري فقط في `infra/docker-compose.yml`.
 
 ---
 
@@ -37,7 +37,7 @@ app/
 alembic/                     # ترقيات ومخططات قاعدة البيانات الموجهة لـ Supabase
 scripts/
 └── seed_demo_data.py        # سكربت زرع بيانات المحاكاة والعرض الحي
-tests/                       # اختبارات Pytest الآلية الشاملة (34 اختباراً ناجحاً)
+tests/                       # اختبارات Pytest الآلية الشاملة (تُعاد الأرقام من مخرجات التشغيل الفعلية)
 ```
 
 ---
@@ -53,10 +53,10 @@ ENV=dev
 CORS_ORIGINS=["http://localhost:3000","http://localhost:5000","*"]
 
 # --- Supabase Auth ---
-SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co
-SUPABASE_PUBLISHABLE_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+SUPABASE_URL=https://YOUR_SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 # أو SUPABASE_ANON_KEY (كلاهما مدعوم تلقائياً)
-SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 
 # --- Supabase PostgreSQL Database ---
 # رابط الاتصال المباشر (أو Transaction/Session Pooler من لوحة تحكم Supabase > Connect):
@@ -148,8 +148,8 @@ uv run python scripts/seed_demo_data.py
 cd apps/mobile
 flutter run -d chrome \
   --dart-define=API_BASE_URL=http://localhost:8000/api/v1 \
-  --dart-define=SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+  --dart-define=SUPABASE_URL=https://YOUR_SUPABASE_URL \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
 #### ب. للتشغيل على محاكي أندرويد (Android Emulator):
@@ -158,8 +158,8 @@ flutter run -d chrome \
 cd apps/mobile
 flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1 \
-  --dart-define=SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+  --dart-define=SUPABASE_URL=https://YOUR_SUPABASE_URL \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
 #### ج. للتشغيل على هاتف حقيقي (Physical Device عبر Wi-Fi):
@@ -168,8 +168,8 @@ flutter run \
 cd apps/mobile
 flutter run \
   --dart-define=API_BASE_URL=http://192.168.1.50:8000/api/v1 \
-  --dart-define=SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+  --dart-define=SUPABASE_URL=https://YOUR_SUPABASE_URL \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
 ---
