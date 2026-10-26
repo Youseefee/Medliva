@@ -288,11 +288,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   key: const ValueKey('open_dose_reminder_card'),
                   borderRadius: BorderRadius.circular(18),
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => DoseReminderScreen(dose: nextDose),
-                      ),
-                    );
+                    context.push('/medications/reminder', extra: nextDose);
                   },
                   child: Container(
                     padding: const EdgeInsetsDirectional.all(14),
@@ -434,67 +430,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         icon: Icons.mic_rounded,
         color: const Color(0xFF00897B),
         title: l10n.navVoiceVitals,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const VoiceVitalsScreen()),
-        ),
+        onTap: () => context.push('/vitals/voice'),
       ),
       (
         icon: Icons.document_scanner_rounded,
         color: const Color(0xFF0284C7),
         title: l10n.scanPrescriptionTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const PrescriptionScanScreen(),
-          ),
-        ),
+        onTap: () => context.push('/prescription/scan')
       ),
       (
         icon: Icons.notifications_active_rounded,
         color: const Color(0xFFF59E0B),
         title: l10n.timeForMedicationTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const DoseReminderScreen()),
-        ),
+        onTap: () => context.push('/medications/reminder'),
       ),
       (
         icon: Icons.sos_rounded,
         color: const Color(0xFFDC2626),
         title: l10n.sosScreenTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const SosEmergencyScreen()),
-        ),
+        onTap: () => context.push('/emergency/sos'),
       ),
       (
         icon: Icons.show_chart_rounded,
         color: const Color(0xFF7C3AED),
         title: l10n.navTrends,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const VitalsTrendsScreen()),
-        ),
+        onTap: () => context.push('/vitals/trends'),
       ),
       (
         icon: Icons.inventory_2_rounded,
         color: const Color(0xFF0D9488),
         title: l10n.navInventoryComm,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const InventoryScreen()),
-        ),
+        onTap: () => context.push('/inventory'),
       ),
       (
         icon: Icons.picture_as_pdf_rounded,
         color: const Color(0xFF2563EB),
         title: l10n.doctorReportTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const DoctorReportScreen()),
-        ),
+        onTap: () => context.push('/reports/doctor'),
       ),
       (
         icon: Icons.notifications_rounded,
         color: const Color(0xFFEA580C),
         title: l10n.notificationsTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
-        ),
+        onTap: () => context.push('/notifications'),
       ),
       (
         icon: Icons.qr_code_rounded,
@@ -506,9 +484,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         icon: Icons.settings_rounded,
         color: const Color(0xFF475569),
         title: l10n.settingsTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
-        ),
+        onTap: () => context.push('/profile'),
       ),
     ];
 

@@ -99,14 +99,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/medications/:id',
         builder: (context, state) {
-          final med =
-              state.extra as MedicationModel? ??
-              MedicationModel(
-                id: state.pathParameters['id'] ?? '',
-                patientId: '',
-                name: '',
-              );
-          return MedicationDetailScreen(medication: med);
+          // Never show a detail screen for an empty placeholder
+          // medication: if the caller did not pass one via `extra`
+          // (deep link / page refresh), load it by id, or show a
+          // not-found error if it cannot be loaded.
+          final med = state.extra as MedicationModel?;
+          if (med != null) {
+            return MedicationDetailScreen(medication: med);
+          }
+          return MedicationDetailLoader(
+            medicationId: state.pathParameters['id'] ?? '',
+          );
         },
       ),
       GoRoute(
@@ -150,7 +153,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/medications/reminder',
-        builder: (context, state) => const DoseReminderScreen(),
+        builder: (context, state) {
+          // The home dose card passes its next dose via `extra`; the
+          // More hub navigates without one, in which case the screen
+          // falls back to the first pending dose as before.
+          final dose = state.extra as TodayDoseModel?;
+          return DoseReminderScreen(dose: dose);
+        },
       ),
       GoRoute(
         path: '/vitals/voice',
@@ -167,3 +176,41 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Loads a medication by id for deep links / refreshes of
+/// `/medications/:id` where no [MedicationModel] was passed via `extra`.
+/// Shows a loading indicator while fetching, the detail screen on
+/// success, and a plain not-found error (never an empty placeholder
+/// medication) when the id is missing or not found.
+class MedicationDetailLoader extends ConsumerWidget {
+  const MedicationDetailLoader({required this.medicationId, super.key});
+
+  final String medicationId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (medicationId.isEmpty) {
+      return const Scaffold(
+        body: Center(child: Text('الدواء غير موجود')),
+      );
+    }
+    final medsAsync = ref.watch(medicationsNotifierProvider);
+    return medsAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => Scaffold(
+        body: Center(child: Text('تعذر تحميل الدواء: $error')),
+      ),
+      data: (meds) {
+        final med = meds.where((m) => m.id == medicationId).firstOrNull;
+        if (med == null) {
+          return const Scaffold(
+            body: Center(child: Text('الدواء غير موجود')),
+          );
+        }
+        return MedicationDetailScreen(medication: med);
+      },
+    );
+  }
+}
