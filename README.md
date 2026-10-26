@@ -4,9 +4,9 @@
 
 ---
 
-## ⚡ معمارية التشغيل السحابي المباشر (Cloud-First & Zero Docker)
+## ⚡ معمارية التشغيل السحابي المباشر (Cloud-First؛ Docker اختياري فقط)
 
-تم بناء المنصة بالكامل لتعمل على **سحابة Supabase المباشرة (Supabase Auth + PostgreSQL 16)** مع تشغيل الخادم الخلفي عبر أداة `uv` الحديثة، **دون الحاجة لأي حاويات Docker محلياً**:
+تم بناء المنصة بالكامل لتعمل على **سحابة Supabase المباشرة (Supabase Auth + PostgreSQL 16)** مع تشغيل الخادم الخلفي عبر أداة `uv` الحديثة. المسار الأساسي **لا يحتاج Docker**؛ ويوجد بديل محلي اختياري فقط في `infra/docker-compose.yml` (خدمات postgres/redis/minio للتطوير، بلا خدمة API):
 
 - **قاعدة البيانات والمصادقة:** سحابة [Supabase](https://supabase.com) المباشرة المشفرة باتصال TLS وسياسات أمان RLS.
 - **الواجهة الخلفية (Backend):** خادم FastAPI غير متزامن بلغة Python 3.12 يُدار بالكامل عبر `uv`.
@@ -19,7 +19,7 @@
 يمكن تثبيت التطبيق وتجربته فوراً على أي هاتف أو محاكي أندرويد دون الحاجة لتثبيت بيئة التطوير:
 - 📥 **رابط التحميل المباشر للإصدار:** [Medliva-v1.0.0.apk](https://github.com/Youseefee/Medliva/releases/download/v1.0.0-latest/Medliva-v1.0.0.apk)
 - 🏷️ **صفحة الإصدارات في المستودع:** [GitHub Releases — Latest](https://github.com/Youseefee/Medliva/releases/tag/v1.0.0-latest)
-- 📦 **ملف التثبيت:** `Medliva-v1.0.0.apk` موقّع وجاهز للتثبيت الفوري لكافة المميزات (التنبيهات، التعرف الصوتي، مسح الروشتات بالكاميرا، وخدمات الطوارئ).
+- 📦 **ملف التثبيت:** `Medliva-v1.0.0.apk` موقّع بمفتاح debug للاختبار فقط (وليس إصدارًا إنتاجيًا موقّعًا)، وجاهز للتثبيت الفوري للتجربة. لإصدار إنتاجي حقيقي، أضف توقيع release عبر أسرار CI كما هو موثّق في `apps/mobile/android/app/build.gradle.kts`.
 
 ---
 
@@ -46,7 +46,7 @@
 apps/mobile          تطبيق Flutter الشامل (المريض + المرافق + توليد تقرير الطبيب PDF)
 services/api         خادم FastAPI المكتمل (المصادقة، الأدوية، القياسات، الفرز، المخزون، الطوارئ)
 services/api/scripts سكربت زرع بيانات العرض التجريبي على Supabase (seed_demo_data.py)
-infra/               ملفات البيئة والإعداد (.env.example)
+infra/               ملفات البيئة والإعداد (.env.example) وبديل محلي اختياري (docker-compose.yml)
 docs/                المستندات الهندسية ومخططات المشروع
 docs/tools/          أدوات إنشاء المستندات والتقارير الأكاديمية (ReportLab PDF)
 ```
@@ -73,8 +73,8 @@ cp infra/.env.example infra/.env
 ```
 المتغيرات الأساسية المطلوبة:
 ```env
-SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co
-SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+SUPABASE_URL=https://YOUR_SUPABASE_URL
+SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 DATABASE_URL=postgresql+asyncpg://postgres:PASSWORD@db.bapyzkwbkkyilgueaftc.supabase.co:5432/postgres
 ```
 
@@ -139,8 +139,8 @@ uv run python scripts/seed_demo_data.py --patient-id <PATIENT_UUID>
 cd apps/mobile
 flutter run -d chrome \
   --dart-define=API_BASE_URL=http://localhost:8000/api/v1 \
-  --dart-define=SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+  --dart-define=SUPABASE_URL=https://YOUR_SUPABASE_URL \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
 #### ب. العرض على محاكي أندرويد (Android Emulator):
@@ -148,8 +148,8 @@ flutter run -d chrome \
 cd apps/mobile
 flutter run \
   --dart-define=API_BASE_URL=http://10.0.2.2:8000/api/v1 \
-  --dart-define=SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+  --dart-define=SUPABASE_URL=https://YOUR_SUPABASE_URL \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
 #### ج. العرض على هاتف حقيقي (Physical Device عبر Wi-Fi):
@@ -158,8 +158,8 @@ cd apps/mobile
 # استبدل 192.168.1.50 بعنوان IP الخاص بجهازك على شبكة الواي فاي المحلية
 flutter run \
   --dart-define=API_BASE_URL=http://192.168.1.50:8000/api/v1 \
-  --dart-define=SUPABASE_URL=https://bapyzkwbkkyilgueaftc.supabase.co \
-  --dart-define=SUPABASE_ANON_KEY=sb_publishable_ar58W5ioZ8ClN-IdcYMe9Q_mQW9CQWU
+  --dart-define=SUPABASE_URL=https://YOUR_SUPABASE_URL \
+  --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
 ### 🎬 سيناريو العرض المقترح أمام اللجنة (5 دقائق):
@@ -174,7 +174,7 @@ flutter run \
 
 ## 🧪 التحقق ومؤشرات الجودة وضمان الاستقرار
 
-تم اختبار المنصة بنسبة 100% بكافة طبقاتها:
-- **الواجهة الخلفية (Backend):** 34 اختباراً آلياً بـ Pytest تغطي المصادقة، والأدوية، والفرز، ومحاكاة البيانات، وحظر الصلاحيات 403.
-- **تطبيق الموبايل (Flutter):** 49 اختباراً للوحدات والـ Widgets والتوجيه ومعالجة انتهاء الجلسات بدون أي أخطاء.
+المنصة مغطاة باختبارات آلية في طبقاتها (تُعاد الأرقام الدقيقة من مخرجات التشغيل الفعلية فقط، ولا تُثبَّت أرقام في التوثيق):
+- **الواجهة الخلفية (Backend):** اختبارات آلية بـ Pytest تغطي المصادقة، والأدوية، والفرز، ومحاكاة البيانات، وحظر الصلاحيات 403.
+- **تطبيق الموبايل (Flutter):** اختبارات للوحدات والـ Widgets والتوجيه ومعالجة انتهاء الجلسات.
 - **إمكانية الوصول (Accessibility):** فحص كامل لمطابقة معايير إمكانية الوصول لكبار السن (WCAG) بأحجام لمس 48dp ونصوص 18sp.
