@@ -7,7 +7,7 @@
 - Check `git status --short` first; preserve unrelated working-tree changes.
 
 ## Project map
-- `apps/mobile`: Flutter patient/caregiver app; current UI is auth, OTP, and home.
+- `apps/mobile`: Flutter patient/caregiver app; current UI is auth (email/password via Supabase Auth, no phone/SMS/OTP in the MVP), and home.
 - `services/api`: FastAPI modular monolith; implementation and tests are the source of truth.
 - `apps/doctor-portal`: reserved for the doctor report portal; currently documentation only.
 - `docs/`: canonical plans, contracts, architecture, and research notes.
