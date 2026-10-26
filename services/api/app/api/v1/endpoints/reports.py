@@ -53,9 +53,13 @@ async def create_report_share(
     db.add(share)
     await db.commit()
 
+    # The share URL must point at the real public route (mounted under
+    # the /api/v1 prefix). The previous "/r/{token}" path matched no
+    # route at all. Note: this is still a path, not an absolute URL —
+    # callers that share it outside the app must prepend the API host.
     return ReportShareOut(
         token=raw_token,
-        url=f"/r/{raw_token}",
+        url=f"/api/v1/public/reports/{raw_token}",
         expires_at=expires_at,
     )
 
@@ -92,6 +96,15 @@ async def get_public_report(
     if not patient:
         raise AppError(404, "PATIENT_NOT_FOUND", "المريض غير موجود")
 
+    # Honour the stored scope instead of ignoring it (previously the
+    # public view always returned the same data for every scope).
+    # "summary_30d" (what the mobile app sends) keeps the previous
+    # 30-day / 20-item view; "full" widens it to 90 days / 100 items,
+    # still bounded so a public link can never dump unlimited history.
+    is_summary = share.scope == "summary_30d"
+    window_days = 30 if is_summary else 90
+    item_limit = 20 if is_summary else 100
+
     # Fetch active medications
     med_stmt = select(Medication).where(
         Medication.patient_id == patient.id,
@@ -115,13 +128,13 @@ async def get_public_report(
             }
         )
 
-    # Fetch last 30 days intake logs
-    thirty_days_ago = now - timedelta(days=30)
+    # Fetch intake logs within the scope window
+    window_start = now - timedelta(days=window_days)
     intake_stmt = (
         select(IntakeLog)
         .where(
             IntakeLog.patient_id == patient.id,
-            IntakeLog.scheduled_time >= thirty_days_ago,
+            IntakeLog.scheduled_time >= window_start,
         )
         .order_by(IntakeLog.scheduled_time.desc())
     )
@@ -138,7 +151,7 @@ async def get_public_report(
         select(VitalsLog)
         .where(VitalsLog.patient_id == patient.id)
         .order_by(VitalsLog.recorded_at.desc())
-        .limit(20)
+        .limit(item_limit)
     )
     vitals_res = await db.execute(vitals_stmt)
     vitals = vitals_res.scalars().all()
@@ -162,7 +175,7 @@ async def get_public_report(
             "status": log.status.value,
             "reason": log.reason,
         }
-        for log in intake_logs[:20]
+        for log in intake_logs[:item_limit]
     ]
 
     return PublicReportOut(

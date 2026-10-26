@@ -35,3 +35,12 @@ def register_error_handlers(app: FastAPI) -> None:
             for err in exc.errors()
         ]
         return _error(422, "VALIDATION_ERROR", "البيانات المرسلة غير صحيحة", details=details)
+
+    @app.exception_handler(ValueError)
+    async def _value_error(_: Request, exc: ValueError) -> JSONResponse:
+        # Enum / time conversions in endpoints (VitalType(...),
+        # IntakeStatus(...), MealRelation(...), parse_time_str) raise
+        # ValueError for invalid client input. That is a client error,
+        # not a server crash: report it as 422 like other validation
+        # errors instead of leaking a generic 500.
+        return _error(422, "VALIDATION_ERROR", "قيمة غير صالحة في البيانات المرسلة")

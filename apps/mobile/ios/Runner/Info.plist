@@ -66,5 +66,15 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Medliva needs camera access to scan prescriptions and documents. / يحتاج Medliva إلى الكاميرا لمسح الروشتات والمستندات.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Medliva needs microphone access for voice entry of vital signs. / يحتاج Medliva إلى الميكروفون لإدخال المؤشرات الحيوية بالصوت.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Medliva needs speech recognition to convert spoken vital-sign readings into text. / يحتاج Medliva إلى التعرف على الكلام لتحويل قراءات المؤشرات الحيوية المنطوقة إلى نص.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Medliva needs your location while using the app to include it in emergency (SOS) alerts. / يحتاج Medliva إلى موقعك أثناء استخدام التطبيق لتضمينه في تنبيهات الطوارئ (SOS).</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Medliva needs photo library access to attach prescription images you choose. / يحتاج Medliva إلى مكتبة الصور لإرفاق صور الروشتات التي تختارها.</string>
 </dict>
 </plist>

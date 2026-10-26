@@ -37,7 +37,13 @@ async def trigger_emergency_sos(
     # Patient triggers SOS
     patient_id = current_user.id
 
-    # Count contacts and caregivers to notify
+    # NOTE: this endpoint does NOT send SMS/push notifications yet
+    # (no FCM credentials are wired up). It counts the registered
+    # emergency contacts + active caregivers and stores the SOS alert
+    # for caregivers to see. `notified_contacts_count` is therefore a
+    # registered-recipient count, not a delivery count; the field name
+    # is kept for mobile compatibility until real delivery is built.
+    # Count contacts and caregivers that would be notified
     c_stmt = select(EmergencyContact).where(EmergencyContact.patient_id == patient_id)
     c_res = await db.execute(c_stmt)
     contacts = c_res.scalars().all()

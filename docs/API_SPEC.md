@@ -32,7 +32,7 @@
 | `POST` | `/ai/scan-prescription` | Auth | `multipart/form-data` (`file`) | `PrescriptionScanResponse` | مسح صورة الروشتة واستخراج الأدوية ومطابقتها مع دليل الأدوية |
 | `GET` | `/patients/{patient_id}/inventory/forecast` | Patient / Linked Caregiver | — | `InventoryForecastOut` | حساب الأيام المتبقية لكل دواء وعدد الأدوية منخفضة المخزون أو منتهية الصلاحية |
 | `POST` | `/patients/{patient_id}/inventory/refill-order` | Patient / Linked Caregiver | `RefillOrderRequest` | `RefillOrderOut` | توليد نص طلب إعادة التعبئة ورابط واتساب (`wa.me`) للصيدلية |
-| `POST` | `/emergency/sos` | Auth | `SosRequest` | `SosResponse` | إطلاق نداء استغاثة عاجل (SOS) مع الموقع الجغرافي الاختياري وإشعار جهات الاتصال والمرافقين |
+| `POST` | `/emergency/sos` | Auth | `SosRequest` | `SosResponse` | إطلاق نداء استغاثة عاجل (SOS) مع الموقع الجغرافي الاختياري وحفظ تنبيه؛ ملاحظة: لا يُرسل إشعار SMS/Push فعليًا بعد — حقل notified_contacts_count هو عدد جهات الاتصال والمرافقين المسجلة فقط |
 | `GET` | `/patients/{patient_id}/contacts` | Patient / Linked Caregiver | — | `list[EmergencyContactOut]` | جلب قائمة جهات اتصال الطوارئ الخاصة بالمريض |
 | `POST` | `/patients/{patient_id}/contacts` | Patient / Linked Caregiver | `EmergencyContactCreate` | `EmergencyContactOut` (`201`) | إضافة جهة اتصال طوارئ جديدة للمريض |
 | `GET` | `/patients/{patient_id}/alerts` | Patient / Linked Caregiver | Query: `limit` (1-200, افتراضي 50), `now` | `list[AlertOut]` | جلب أحدث تنبيهات المريض (`sos`, `critical_vital`, `low_stock`, `missed_dose`) مرتبة من الأحدث للأقدم؛ الجرعات الفائتة تُحسب من جدول اليوم وقاعدة الـ 15 دقيقة |

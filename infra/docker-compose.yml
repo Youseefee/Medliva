@@ -1,7 +1,10 @@
 # ==============================================================================
-# NOTE: This file is an OPTIONAL local fallback.
-# The primary architecture uses Supabase (Postgres & Storage) and Upstash (Redis)
-# to eliminate local Docker dependency.
+# NOTE: This file is an OPTIONAL local fallback ONLY.
+# The primary architecture uses Supabase (Postgres & Storage) and Upstash
+# (Redis) and does not need Docker at all. Do not treat this compose file
+# as a runnable copy of the production stack: there is no API service in
+# it, because services/api has no Dockerfile and no celery worker code.
+# It only provides local postgres / redis / minio for development.
 # ==============================================================================
 services:
   postgres:
@@ -26,20 +29,10 @@ services:
     ports: ["9000:9000", "9001:9001"]
     volumes: [miniodata:/data]
 
-  # Uncomment once services/api has a Dockerfile
-  # api:
-  #   build: ../services/api
-  #   env_file: .env
-  #   ports: ["8000:8000"]
-  #   depends_on: [postgres, redis, minio]
-  # worker:
-  #   build: ../services/api
-  #   command: celery -A app.workers.celery_app worker -l info
-  #   env_file: .env
-  # beat:
-  #   build: ../services/api
-  #   command: celery -A app.workers.celery_app beat -l info
-  #   env_file: .env
+  # No api/worker/beat services: they were previously listed here as
+  # commented-out blocks pointing at a Dockerfile and a celery app
+  # (app.workers.celery_app) that do not exist in this repository.
+  # Re-add them only together with a real Dockerfile and worker code.
 
 volumes:
   pgdata:

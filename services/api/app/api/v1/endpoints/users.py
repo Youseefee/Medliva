@@ -23,11 +23,7 @@ async def update_me(
     db: AsyncSession = Depends(get_db),
 ) -> UserOut:
     update_data = body.model_dump(exclude_unset=True)
-    if "role" in update_data and update_data["role"] is not None:
-        from app.models.user import UserRole
-
-        role_val = str(update_data["role"]).lower().strip()
-        update_data["role"] = UserRole(role_val)
+    # `role` is not part of UserUpdateIn: it can no longer be changed here.
     for key, value in update_data.items():
         setattr(current_user, key, value)
 

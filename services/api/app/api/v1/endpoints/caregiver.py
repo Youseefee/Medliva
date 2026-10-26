@@ -1,10 +1,11 @@
-import random
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
+from sqlalchemy.exc import MultipleResultsFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import check_patient_access, get_current_user
@@ -35,7 +36,8 @@ async def generate_pairing_code(
     if current_user.role != UserRole.PATIENT:
         raise AppError(400, "INVALID_ROLE", "يجب أن يكون الحساب من نوع مريض لتوليد رمز الاقتران")
 
-    code = f"{random.randint(100000, 999999)}"
+    # secrets (not random) for a code that authenticates a pairing.
+    code = f"{secrets.randbelow(900000) + 100000}"
     expires_at = datetime.now(UTC) + timedelta(minutes=10)
 
     # Find existing pending link or create new
@@ -44,7 +46,14 @@ async def generate_pairing_code(
         CaregiverLink.status == CaregiverLinkStatus.PENDING,
     )
     result = await db.execute(stmt)
-    link = result.scalar_one_or_none()
+    try:
+        link = result.scalar_one_or_none()
+    except MultipleResultsFound:
+        raise AppError(
+            400,
+            "PAIRING_CODE_CONFLICT",
+            "يوجد أكثر من طلب اقتران معلق؛ أعد توليد الرمز وحاول مجددًا",
+        ) from None
 
     if link:
         link.pairing_code = code
@@ -76,7 +85,16 @@ async def pair_caregiver_with_patient(
         CaregiverLink.status == CaregiverLinkStatus.PENDING,
     )
     result = await db.execute(stmt)
-    link = result.scalar_one_or_none()
+    try:
+        link = result.scalar_one_or_none()
+    except MultipleResultsFound:
+        # A duplicated code must not surface as a generic 500: tell the
+        # caregiver the code is ambiguous and to ask for a fresh one.
+        raise AppError(
+            400,
+            "PAIRING_CODE_CONFLICT",
+            "رمز الاقتران مكرر؛ اطلب رمزًا جديدًا من المريض وحاول مجددًا",
+        ) from None
 
     now = datetime.now(UTC)
     if not link:
