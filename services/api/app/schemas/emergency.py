@@ -88,4 +88,8 @@ class SosRequest(BaseModel):
 class SosResponse(BaseModel):
     status: str
     alert_id: uuid.UUID
+    # NOT a delivery count: no SMS/push is sent by this endpoint yet.
+    # This is the number of registered emergency contacts + active
+    # caregivers for the patient, and the SOS alert is only stored.
+    # The field name is kept unchanged for mobile compatibility.
     notified_contacts_count: int

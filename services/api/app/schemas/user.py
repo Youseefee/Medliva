@@ -1,6 +1,5 @@
 import uuid
 from datetime import date, datetime
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -25,8 +24,13 @@ class UserOut(BaseModel):
 class UserUpdateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # NOTE: `role` is deliberately absent. A user must not be able to
+    # change their own role through PATCH /me (previously a self-service
+    # patient <-> caregiver switch, and the schema already rejected
+    # `admin`). Role changes, if ever needed, belong to a separate
+    # admin-only endpoint — there is currently no such endpoint, so
+    # sending `role` now returns 422 (extra="forbid").
     name: str | None = Field(None, max_length=100)
-    role: Literal["patient", "caregiver"] | None = None
     language: str | None = Field(None, max_length=10)
     timezone: str | None = Field(None, max_length=50)
     birth_date: date | None = None

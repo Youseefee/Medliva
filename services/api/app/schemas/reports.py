@@ -1,11 +1,17 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
 
 class ReportShareCreate(BaseModel):
-    scope: str = "full"
+    # Only these scopes are honoured by GET /public/reports/{token}.
+    # Unknown scopes are now rejected (422) instead of being silently
+    # ignored: previously any scope string was stored and the public
+    # view always returned the same data.
+    # - "summary_30d": last 30 days, as sent by the mobile app.
+    # - "full": a wider bounded view (last 90 days, more items).
+    scope: Literal["full", "summary_30d"] = "full"
     expires_in_hours: int = 48
 
 
