@@ -104,9 +104,20 @@ class MedicationListScreen extends ConsumerWidget {
     );
 
     if (confirmed ?? false) {
-      await ref
-          .read(medicationsNotifierProvider.notifier)
-          .deleteMedication(medication.id);
+      try {
+        await ref
+            .read(medicationsNotifierProvider.notifier)
+            .deleteMedication(medication.id);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.toString()),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -145,7 +156,18 @@ class MedicationListScreen extends ConsumerWidget {
         error: (err, _) => Center(
           child: Padding(
             padding: const EdgeInsetsDirectional.all(24),
-            child: Text(err.toString(), style: theme.textTheme.bodyLarge),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(err.toString(), style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                ElevatedButton.icon(
+                  onPressed: () => ref.invalidate(medicationsNotifierProvider),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(l10n.retry),
+                ),
+              ],
+            ),
           ),
         ),
         data: (medications) {

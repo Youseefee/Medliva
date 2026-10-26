@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/vitals/data/vitals_repository.dart';
 import 'package:medliva/features/vitals/domain/models/vital.dart';
@@ -292,7 +293,22 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
               // Readings List
               vitalsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text(err.toString())),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.all(16),
+                    child: Column(
+                      children: [
+                        Text(err.toString(), textAlign: TextAlign.center),
+                        const SizedBox(height: 8),
+                        ElevatedButton.icon(
+                          onPressed: () => ref.invalidate(vitalsNotifierProvider),
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: Text(l10n.retry),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 data: (list) {
                   if (list.isEmpty) {
                     return Padding(
@@ -374,63 +390,67 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                   borderRadius: BorderRadius.circular(20),
                   side: BorderSide(color: Colors.grey.shade200),
                 ),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.all(20),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.favorite_rounded,
-                            color: Color(0xFFE53935),
-                            size: 30,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => context.push('/vitals/trends'),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.all(20),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.favorite_rounded,
+                              color: Color(0xFFE53935),
+                              size: 30,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                l10n.vitalTypeBp,
+                                style: theme.textTheme.titleLarge,
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          bpText,
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            color: const Color(0xFF0F2942),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              l10n.vitalTypeBp,
-                              style: theme.textTheme.titleLarge,
+                        ),
+                        Text(
+                          l10n.unitMmHg,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _bandColor(bpBand).withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _summaryBandLabel(l10n, bpBand),
+                            style: TextStyle(
+                              color: _bandColor(bpBand),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
                             ),
                           ),
-                          const Icon(Icons.chevron_right_rounded),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        bpText,
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          color: const Color(0xFF0F2942),
                         ),
-                      ),
-                      Text(
-                        l10n.unitMmHg,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
+                        const SizedBox(height: 8),
+                        Text(
+                          '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
+                          style: theme.textTheme.bodySmall,
                         ),
-                        decoration: BoxDecoration(
-                          color: _bandColor(bpBand).withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _summaryBandLabel(l10n, bpBand),
-                          style: TextStyle(
-                            color: _bandColor(bpBand),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -444,64 +464,68 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                   borderRadius: BorderRadius.circular(20),
                   side: BorderSide(color: Colors.grey.shade200),
                 ),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.all(20),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.water_drop_rounded,
-                            color: Color(0xFFD32F2F),
-                            size: 30,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () => context.push('/vitals/trends'),
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.all(20),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.water_drop_rounded,
+                              color: Color(0xFFD32F2F),
+                              size: 30,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                l10n.vitalTypeGlucose,
+                                style: theme.textTheme.titleLarge,
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          glucoseText,
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            color: const Color(0xFF0F2942),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              l10n.vitalTypeGlucose,
-                              style: theme.textTheme.titleLarge,
+                        ),
+                        Text(
+                          l10n.unitMgDl,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsetsDirectional.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                _bandColor(glucoseBand).withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _summaryBandLabel(l10n, glucoseBand),
+                            style: TextStyle(
+                              color: _bandColor(glucoseBand),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
                             ),
                           ),
-                          const Icon(Icons.chevron_right_rounded),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        glucoseText,
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          color: const Color(0xFF0F2942),
                         ),
-                      ),
-                      Text(
-                        l10n.unitMgDl,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsetsDirectional.symmetric(
-                          horizontal: 20,
-                          vertical: 8,
+                        const SizedBox(height: 8),
+                        Text(
+                          '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
+                          style: theme.textTheme.bodySmall,
                         ),
-                        decoration: BoxDecoration(
-                          color:
-                              _bandColor(glucoseBand).withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _summaryBandLabel(l10n, glucoseBand),
-                          style: TextStyle(
-                            color: _bandColor(glucoseBand),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

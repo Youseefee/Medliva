@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:medliva/features/medications/domain/models/medication.dart';
 import 'package:medliva/features/medications/presentation/screens/today_screen.dart';
 import 'package:medliva/l10n/app_localizations.dart';
@@ -139,7 +140,11 @@ class DoseReminderScreen extends ConsumerWidget {
                           .logDose(dose: activeDose, status: 'taken');
                     }
                     if (context.mounted) {
-                      Navigator.of(context).pop();
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        context.go('/patient');
+                      }
                     }
                   },
                   icon: const Icon(Icons.check_rounded, size: 32),
@@ -171,7 +176,11 @@ class DoseReminderScreen extends ConsumerWidget {
                           .logDose(dose: activeDose, status: 'snoozed');
                     }
                     if (context.mounted) {
-                      Navigator.of(context).pop();
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        context.go('/patient');
+                      }
                     }
                   },
                   icon: const Icon(Icons.access_time_rounded, size: 30),

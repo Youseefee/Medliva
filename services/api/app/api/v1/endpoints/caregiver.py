@@ -79,11 +79,14 @@ async def pair_caregiver_with_patient(
     link = result.scalar_one_or_none()
 
     now = datetime.now(UTC)
+    if not link:
+        raise AppError(400, "INVALID_CODE", "رمز الاقتران غير صحيح أو منتهي الصلاحية")
+
     exp = link.pairing_code_expires_at
     if exp and exp.tzinfo is None:
         exp = exp.replace(tzinfo=UTC)
 
-    if not link or not exp or exp < now:
+    if not exp or exp < now:
         raise AppError(400, "INVALID_CODE", "رمز الاقتران غير صحيح أو منتهي الصلاحية")
 
     if link.patient_id == current_user.id:

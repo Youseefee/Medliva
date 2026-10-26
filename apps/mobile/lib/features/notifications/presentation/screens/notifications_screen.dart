@@ -1,5 +1,7 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/caregiver/data/caregiver_repository.dart';
 import 'package:medliva/features/caregiver/domain/models/caregiver.dart';
@@ -180,70 +182,85 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       separatorBuilder: (_, _) => const SizedBox(height: 14),
                       itemBuilder: (context, index) {
                         final item = filtered[index];
-                        return Container(
-                          key: ValueKey('notif_card_${item.id}'),
-                          padding: const EdgeInsetsDirectional.all(18),
-                          decoration: BoxDecoration(
-                            color: item.bgColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              CircleAvatar(
-                                radius: 26,
-                                backgroundColor: item.iconColor,
-                                child: Icon(
-                                  item.icon,
-                                  color: Colors.white,
-                                  size: 28,
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            switch (item.category) {
+                              case 'medications':
+                                unawaited(context.push('/medications'));
+                              case 'alerts':
+                                unawaited(context.push('/vitals'));
+                              case 'caregivers':
+                                unawaited(context.push('/caregiver/pairing-code'));
+                              default:
+                                unawaited(context.push('/inventory'));
+                            }
+                          },
+                          child: Container(
+                            key: ValueKey('notif_card_${item.id}'),
+                            padding: const EdgeInsetsDirectional.all(18),
+                            decoration: BoxDecoration(
+                              color: item.bgColor,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  radius: 26,
+                                  backgroundColor: item.iconColor,
+                                  child: Icon(
+                                    item.icon,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            item.title,
-                                            style: theme.textTheme.titleMedium
-                                                ?.copyWith(
-                                              color: item.iconColor,
-                                              fontWeight: FontWeight.bold,
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.title,
+                                              style: theme.textTheme.titleMedium
+                                                  ?.copyWith(
+                                                color: item.iconColor,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          item.timeLabel,
-                                          style: theme.textTheme.bodySmall,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      item.body,
-                                      style: theme.textTheme.titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            item.timeLabel,
+                                            style: theme.textTheme.bodySmall,
                                           ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      item.subBody,
-                                      style: theme.textTheme.bodyMedium,
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        item.body,
+                                        style: theme.textTheme.titleMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        item.subBody,
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.chevron_right_rounded, size: 24),
-                            ],
+                                const SizedBox(width: 8),
+                                const Icon(Icons.chevron_right_rounded, size: 24),
+                              ],
+                            ),
                           ),
                         );
                       },

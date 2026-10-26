@@ -26,7 +26,8 @@ async def update_me(
     if "role" in update_data and update_data["role"] is not None:
         from app.models.user import UserRole
 
-        update_data["role"] = UserRole(update_data["role"])
+        role_val = str(update_data["role"]).lower().strip()
+        update_data["role"] = UserRole(role_val)
     for key, value in update_data.items():
         setattr(current_user, key, value)
 

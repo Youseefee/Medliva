@@ -108,7 +108,29 @@ class _DoctorReportScreenState extends ConsumerState<DoctorReportScreen> {
       body: SafeArea(
         child: summaryAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text(err.toString())),
+          error: (err, _) => Center(
+            child: Padding(
+              padding: const EdgeInsetsDirectional.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 48, color: Colors.grey),
+                  const SizedBox(height: 12),
+                  Text(
+                    'تعذر تحميل تقرير الطبيب في الوقت الحالي',
+                    style: theme.textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => ref.invalidate(reportSummaryProvider),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(l10n.retry),
+                  ),
+                ],
+              ),
+            ),
+          ),
           data: (summary) {
             if (summary == null) {
               return const SizedBox.shrink();

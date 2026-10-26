@@ -27,7 +27,18 @@ class CaregiverDashboardScreen extends ConsumerWidget {
       error: (err, _) => Center(
         child: Padding(
           padding: const EdgeInsetsDirectional.all(24),
-          child: Text(err.toString(), style: theme.textTheme.bodyLarge),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(err.toString(), style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () => ref.invalidate(linkedPatientsProvider),
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
         ),
       ),
       data: (patients) {

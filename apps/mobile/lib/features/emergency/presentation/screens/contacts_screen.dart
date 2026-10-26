@@ -79,6 +79,15 @@ class _EmergencyContactsScreenState
       _nameController.clear();
       _phoneController.clear();
       _relationController.clear();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -150,7 +159,20 @@ class _EmergencyContactsScreenState
             Expanded(
               child: contactsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text(err.toString())),
+                error: (err, _) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(err.toString()),
+                      const SizedBox(height: 12),
+                      ElevatedButton.icon(
+                        onPressed: () => ref.invalidate(emergencyContactsNotifierProvider),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: Text(l10n.retry),
+                      ),
+                    ],
+                  ),
+                ),
                 data: (contacts) => ListView.separated(
                   padding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 16,

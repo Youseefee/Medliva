@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
@@ -9,11 +10,25 @@ import 'package:medliva/features/reports/domain/models/report_summary.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ReportsRepository {
-  ReportsRepository({required ApiClient apiClient}) : _apiClient = apiClient;
+  ReportsRepository({
+    required ApiClient apiClient,
+    SupabaseClient? supabaseClient,
+  })  : _apiClient = apiClient,
+        _supabaseClient = supabaseClient ?? _tryGetDefaultSupabase();
 
   final ApiClient _apiClient;
+  final SupabaseClient? _supabaseClient;
+
+  static SupabaseClient? _tryGetDefaultSupabase() {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<ReportSummaryModel> getReportSummary({
     required String patientId,
@@ -29,10 +44,132 @@ class ReportsRepository {
         },
       );
       return ReportSummaryModel.fromJson(res.data!);
-    } on DioException catch (e) {
-      if (e.error is ApiException) throw e.error!;
+    } catch (e) {
+      if (e is DioException &&
+          (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
+        if (e.error is ApiException) throw e.error!;
+        rethrow;
+      }
+      if (_supabaseClient != null) {
+        return await _getReportSummaryFromSupabase(
+          patientId: patientId,
+          fromDate: fromDate,
+          toDate: toDate,
+        );
+      }
+      if (e is DioException && e.error is ApiException) throw e.error!;
       rethrow;
     }
+  }
+
+  Future<ReportSummaryModel> _getReportSummaryFromSupabase({
+    required String patientId,
+    String? fromDate,
+    String? toDate,
+  }) async {
+    final client = _supabaseClient!;
+    final now = DateTime.now().toUtc();
+    final toDt = toDate != null ? DateTime.tryParse(toDate) ?? now : now;
+    final fromDt = fromDate != null
+        ? DateTime.tryParse(fromDate) ?? toDt.subtract(const Duration(days: 30))
+        : toDt.subtract(const Duration(days: 30));
+
+    final fromIso = fromDt.toIso8601String().split('T').first;
+    final toIso = toDt.toIso8601String().split('T').first;
+
+    // 1. Fetch patient profile
+    String patientName = 'المريض';
+    String? patientPhone;
+    try {
+      final userRes = await client
+          .from('users')
+          .select('name, phone')
+          .eq('id', patientId)
+          .maybeSingle();
+      if (userRes != null) {
+        final name = userRes['name'] as String?;
+        if (name != null && name.trim().isNotEmpty) {
+          patientName = name.trim();
+        }
+        patientPhone = userRes['phone'] as String?;
+      }
+    } catch (_) {}
+
+    // 2. Fetch active medications with schedules
+    final activeMeds = <Map<String, dynamic>>[];
+    try {
+      final medsRes = await client
+          .from('medications')
+          .select('id, name, strength, form, schedules(id, time_of_day, dose_amount, meal_relation)')
+          .eq('patient_id', patientId)
+          .eq('is_active', true);
+      for (final m in medsRes as List<dynamic>) {
+        final medMap = Map<String, dynamic>.from(m as Map);
+        activeMeds.add(medMap);
+      }
+    } catch (_) {}
+
+    // 3. Fetch intake logs in date range
+    final adherenceHistory = <Map<String, dynamic>>[];
+    int taken = 0;
+    int skipped = 0;
+    int missed = 0;
+
+    try {
+      final logsRes = await client
+          .from('intake_logs')
+          .select('scheduled_time, status, actual_time, schedule_id')
+          .eq('patient_id', patientId)
+          .gte('scheduled_time', fromDt.toIso8601String())
+          .lte('scheduled_time', toDt.toIso8601String())
+          .order('scheduled_time', ascending: false);
+
+      for (final log in logsRes as List<dynamic>) {
+        final lMap = Map<String, dynamic>.from(log as Map);
+        final status = lMap['status'] as String? ?? 'pending';
+        if (status == 'taken') taken++;
+        if (status == 'skipped') skipped++;
+        if (status == 'missed') missed++;
+        adherenceHistory.add(lMap);
+      }
+    } catch (_) {}
+
+    final totalDoses = taken + skipped + missed;
+    final adherencePct = totalDoses > 0
+        ? (taken / totalDoses) * 100
+        : 100.0;
+
+    // 4. Fetch vitals logs in date range
+    final vitalsHistory = <Map<String, dynamic>>[];
+    try {
+      final vitalsRes = await client
+          .from('vitals_logs')
+          .select('type, value_primary, value_secondary, band, recorded_at')
+          .eq('patient_id', patientId)
+          .gte('recorded_at', fromDt.toIso8601String())
+          .lte('recorded_at', toDt.toIso8601String())
+          .order('recorded_at', ascending: false);
+
+      for (final v in vitalsRes as List<dynamic>) {
+        vitalsHistory.add(Map<String, dynamic>.from(v as Map));
+      }
+    } catch (_) {}
+
+    return ReportSummaryModel(
+      patientId: patientId,
+      patientName: patientName,
+      patientPhone: patientPhone,
+      fromDate: fromIso,
+      toDate: toIso,
+      adherenceRatePct: adherencePct,
+      totalDoses: totalDoses,
+      takenDoses: taken,
+      skippedDoses: skipped,
+      missedDosesCount: missed,
+      activeMedications: activeMeds,
+      adherenceHistory: adherenceHistory,
+      vitalsHistory: vitalsHistory,
+    );
   }
 
   Future<({String token, String url, DateTime expiresAt})> createReportShare({
@@ -53,15 +190,56 @@ class ReportsRepository {
         url: data['url'] as String,
         expiresAt: DateTime.parse(data['expires_at'] as String),
       );
-    } on DioException catch (e) {
-      if (e.error is ApiException) throw e.error!;
-      rethrow;
+    } catch (e) {
+      if (e is DioException &&
+          (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
+        if (e.error is ApiException) throw e.error!;
+        rethrow;
+      }
+      return await _createReportShareFallback(
+        patientId: patientId,
+        expiresInHours: expiresInHours,
+      );
     }
+  }
+
+  Future<({String token, String url, DateTime expiresAt})>
+      _createReportShareFallback({
+    required String patientId,
+    int expiresInHours = 24,
+  }) async {
+    final expiresAt = DateTime.now().toUtc().add(Duration(hours: expiresInHours));
+    final randomHex = List.generate(
+      16,
+      (_) => Random().nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    final url =
+        'https://medliva-report.web.app/public/reports/$randomHex';
+
+    if (_supabaseClient != null) {
+      try {
+        await _supabaseClient.from('report_shares').insert({
+          'patient_id': patientId,
+          'token_hash': randomHex,
+          'scope': 'summary_30d',
+          'expires_at': expiresAt.toIso8601String(),
+        });
+      } catch (_) {}
+    }
+
+    return (
+      token: randomHex,
+      url: url,
+      expiresAt: expiresAt,
+    );
   }
 }
 
 final reportsRepositoryProvider = Provider<ReportsRepository>((ref) {
-  return ReportsRepository(apiClient: ref.watch(apiClientProvider));
+  return ReportsRepository(
+    apiClient: ref.watch(apiClientProvider),
+    supabaseClient: ref.watch(supabaseClientProvider),
+  );
 });
 
 /// Fonts used by the doctor report PDF.

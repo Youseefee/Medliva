@@ -24,8 +24,8 @@ class ApiClient {
            Dio(
              BaseOptions(
                baseUrl: AppConfig.apiBaseUrl,
-               connectTimeout: const Duration(seconds: 5),
-               receiveTimeout: const Duration(seconds: 8),
+               connectTimeout: const Duration(milliseconds: 2500),
+               receiveTimeout: const Duration(seconds: 5),
                headers: {'Content-Type': 'application/json'},
              ),
            ),
@@ -36,6 +36,8 @@ class ApiClient {
   final TokenStorage _tokenStorage;
   final Dio _dio;
   final Future<void> Function()? _onUnauthorized;
+  DateTime? _lastConnectionFailure;
+  static const Duration _unreachableCooldown = Duration(seconds: 25);
 
   Dio get dio => _dio;
 
@@ -43,6 +45,22 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // If the local server recently failed to connect, fail fast and allow
+          // the repository's Supabase fallback to respond immediately.
+          if (_lastConnectionFailure != null &&
+              DateTime.now().difference(_lastConnectionFailure!) <
+                  _unreachableCooldown) {
+            return handler.reject(
+              DioException(
+                requestOptions: options,
+                type: DioExceptionType.connectionError,
+                error: ApiException(
+                  message: 'تعذر الاتصال بالسيرفر المحلي، الانتقال للخدمة السحابية',
+                ),
+              ),
+            );
+          }
+
           final token = await _tokenStorage.getAccessToken();
           if (token != null && token.isNotEmpty) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -50,6 +68,13 @@ class ApiClient {
           handler.next(options);
         },
         onError: (error, handler) async {
+          if (error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.connectionError ||
+              error.type == DioExceptionType.sendTimeout ||
+              error.type == DioExceptionType.receiveTimeout) {
+            _lastConnectionFailure = DateTime.now();
+          }
+
           final alreadyRetried = error.requestOptions.extra['_retried'] == true;
           if (error.response?.statusCode == 401 && !alreadyRetried) {
             try {

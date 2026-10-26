@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
@@ -26,15 +27,27 @@ class InventoryScreen extends ConsumerWidget {
   ) async {
     final patientId = ref.read(currentPatientIdProvider);
     if (patientId == null) return;
-    final repo = ref.read(inventoryRepositoryProvider);
-    final res = await repo.createRefillOrder(
-      patientId: patientId,
-      medicationName: item.name,
-    );
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(res.messageText)),
-    );
+    try {
+      final repo = ref.read(inventoryRepositoryProvider);
+      final res = await repo.createRefillOrder(
+        patientId: patientId,
+        medicationName: item.name,
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(res.messageText),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -78,7 +91,23 @@ class InventoryScreen extends ConsumerWidget {
               const SizedBox(height: 8),
               forecastAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text(err.toString())),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.all(16),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(err.toString(), textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () => ref.invalidate(inventoryForecastProvider),
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: Text(l10n.retry),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
                 data: (items) => ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -241,9 +270,20 @@ class InventoryScreen extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                     ),
                   ),
-                  onPressed: () {
+                  onPressed: () async {
+                    final items = forecastAsync.value ?? const [];
+                    final lowStockMeds = items.where((i) => i.isUnderSevenDays).toList();
+                    final names = lowStockMeds.isNotEmpty
+                        ? lowStockMeds.map((m) => m.name).join('، ')
+                        : (items.isNotEmpty ? items.first.name : 'الأدوية');
+                    final msg =
+                        'السلام عليكم، أود طلب إعادة صرف أدوية من الصيدلية: $names. شكراً جزيلاً.';
+                    await Clipboard.setData(ClipboardData(text: msg));
+                    if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.messagePharmacyButton)),
+                      const SnackBar(
+                        content: Text('تم تجهيز ونسخ رسالة طلب الصيدلية إلى الحافظة بنجاح'),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.send_rounded),
