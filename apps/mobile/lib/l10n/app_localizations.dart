@@ -644,18 +644,6 @@ abstract class AppLocalizations {
   /// **'حرج / خطر'**
   String get triageCritical;
 
-  /// No description provided for @voiceVitalButton.
-  ///
-  /// In ar, this message translates to:
-  /// **'إدخال صوتي'**
-  String get voiceVitalButton;
-
-  /// No description provided for @voiceVitalConfirmTitle.
-  ///
-  /// In ar, this message translates to:
-  /// **'تأكيد القراءة الصوتية'**
-  String get voiceVitalConfirmTitle;
-
   /// No description provided for @confirmSaveButton.
   ///
   /// In ar, this message translates to:
@@ -860,12 +848,6 @@ abstract class AppLocalizations {
   /// **'المخزون والتواصل'**
   String get navInventoryComm;
 
-  /// No description provided for @navVoiceVitals.
-  ///
-  /// In ar, this message translates to:
-  /// **'القياس بالصوت'**
-  String get navVoiceVitals;
-
   /// No description provided for @navSos.
   ///
   /// In ar, this message translates to:
@@ -905,7 +887,7 @@ abstract class AppLocalizations {
   /// No description provided for @weeklyAdherenceTitle.
   ///
   /// In ar, this message translates to:
-  /// **'الالتزام بالأدوية هذا الأسبوع'**
+  /// **'التزامك اليوم'**
   String get weeklyAdherenceTitle;
 
   /// No description provided for @weeklyAdherenceSub.
@@ -919,6 +901,12 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'أحسنت، استمر'**
   String get weeklyAdherenceKeepUp;
+
+  /// No description provided for @noPendingDose.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد جرعة معلّقة الآن'**
+  String get noPendingDose;
 
   /// No description provided for @timeForMedicationTitle.
   ///
@@ -986,11 +974,11 @@ abstract class AppLocalizations {
   /// **'مجم/دسل'**
   String get unitMgDl;
 
-  /// No description provided for @lastReadingToday.
+  /// No description provided for @lastReadingAt.
   ///
   /// In ar, this message translates to:
-  /// **'آخر قياس: اليوم'**
-  String get lastReadingToday;
+  /// **'آخر قياس: {time}'**
+  String lastReadingAt(String time);
 
   /// No description provided for @escalationReminder15m.
   ///
@@ -1147,24 +1135,6 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تحميل PDF'**
   String get downloadPdfButton;
-
-  /// No description provided for @voiceVitalTitle.
-  ///
-  /// In ar, this message translates to:
-  /// **'القياس بالصوت'**
-  String get voiceVitalTitle;
-
-  /// No description provided for @voiceVitalSubtitle.
-  ///
-  /// In ar, this message translates to:
-  /// **'تحدث لإدخال قياساتك بسهولة'**
-  String get voiceVitalSubtitle;
-
-  /// No description provided for @pressAndSpeak.
-  ///
-  /// In ar, this message translates to:
-  /// **'اضغط وتكلم'**
-  String get pressAndSpeak;
 
   /// No description provided for @vitalLoggedSuccess.
   ///
@@ -1580,23 +1550,47 @@ abstract class AppLocalizations {
   /// **'{meds} أدوية حالية • {vitals} قراءات حيوية'**
   String reportActiveMedsVitalsSummary(int meds, int vitals);
 
-  /// No description provided for @defaultSampleTime.
+  /// No description provided for @prescriptionPatientRequired.
   ///
   /// In ar, this message translates to:
-  /// **'8:00 صباحاً'**
-  String get defaultSampleTime;
+  /// **'اختر المريض قبل مسح الروشتة.'**
+  String get prescriptionPatientRequired;
 
-  /// No description provided for @defaultSampleVitalTime.
+  /// No description provided for @pillImageTitle.
   ///
   /// In ar, this message translates to:
-  /// **'7:30 صباحاً'**
-  String get defaultSampleVitalTime;
+  /// **'صورة الدواء'**
+  String get pillImageTitle;
 
-  /// No description provided for @defaultSampleMedication.
+  /// No description provided for @pillImageEmpty.
   ///
   /// In ar, this message translates to:
-  /// **'أملوديبين 5 مجم'**
-  String get defaultSampleMedication;
+  /// **'لم تتم إضافة صورة للدواء بعد'**
+  String get pillImageEmpty;
+
+  /// No description provided for @pillImageUnavailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'صورة الدواء غير متاحة حاليًا'**
+  String get pillImageUnavailable;
+
+  /// No description provided for @pillImageUploadButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة أو تغيير الصورة'**
+  String get pillImageUploadButton;
+
+  /// No description provided for @pillImageUploadSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ صورة الدواء بأمان'**
+  String get pillImageUploadSuccess;
+
+  /// No description provided for @pillImageUploadFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر حفظ صورة الدواء'**
+  String get pillImageUploadFailed;
 }
 
 class _AppLocalizationsDelegate

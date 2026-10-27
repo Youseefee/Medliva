@@ -129,8 +129,6 @@
   "triageNormal": "طبيعي",
   "triageBorderline": "حدودي / يحتاج متابعة",
   "triageCritical": "حرج / خطر",
-  "voiceVitalButton": "إدخال صوتي",
-  "voiceVitalConfirmTitle": "تأكيد القراءة الصوتية",
   "confirmSaveButton": "تأكيد وحفظ",
   "noVitalsRecorded": "لا توجد قياسات مسجلة بعد",
   "scanPrescriptionTitle": "مسح الروشتة",
@@ -172,14 +170,13 @@
   "navTimeline": "الجدول الزمني",
   "navTrends": "اتجاهات القياسات",
   "navInventoryComm": "المخزون والتواصل",
-  "navVoiceVitals": "القياس بالصوت",
   "navSos": "استغاثة",
   "navNotifications": "الإشعارات",
   "navSettings": "الإعدادات",
   "goodMorning": "صباح الخير",
   "goodMorningGreeting": "نتمنى لك يوماً صحياً وسعيداً",
   "todayMedicationCardTitle": "دواء اليوم",
-  "weeklyAdherenceTitle": "الالتزام بالأدوية هذا الأسبوع",
+  "weeklyAdherenceTitle": "التزامك اليوم",
   "weeklyAdherenceSub": "{taken} من {total} جرعات",
   "@weeklyAdherenceSub": {
     "placeholders": {
@@ -192,6 +189,7 @@
     }
   },
   "weeklyAdherenceKeepUp": "أحسنت، استمر",
+  "noPendingDose": "لا توجد جرعة معلّقة الآن",
   "timeForMedicationTitle": "حان وقت الدواء",
   "timeForMedicationTip": "حافظ على التزامك بموعد الدواء لصحة أفضل",
   "tookItButton": "أخذته",
@@ -210,7 +208,14 @@
   "twiceDaily": "مرتين يومياً",
   "unitMmHg": "مم زئبق",
   "unitMgDl": "مجم/دسل",
-  "lastReadingToday": "آخر قياس: اليوم",
+  "lastReadingAt": "آخر قياس: {time}",
+  "@lastReadingAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "escalationReminder15m": "+15 دقيقة: تم إرسال تذكير",
   "escalationFamily30m": "+30 دقيقة: تم إشعار أفراد العائلة",
   "escalationDoctor60m": "+60 دقيقة: التصعيد للطبيب إذا استمرت الجرعة مفقودة",
@@ -237,9 +242,6 @@
   "expiresIn24HoursSub": "سينتهي الرابط تلقائياً بعد 24 ساعة لحماية خصوصية المريض",
   "shareLinkButton": "مشاركة الرابط",
   "downloadPdfButton": "تحميل PDF",
-  "voiceVitalTitle": "القياس بالصوت",
-  "voiceVitalSubtitle": "تحدث لإدخال قياساتك بسهولة",
-  "pressAndSpeak": "اضغط وتكلم",
   "vitalLoggedSuccess": "تم تسجيل القياس",
   "reassuringStatusTitle": "الحالة مطمئنة",
   "reassuringStatusSub": "قياسك ضمن المعدل الطبيعي",
@@ -434,7 +436,11 @@
       }
     }
   },
-  "defaultSampleTime": "8:00 صباحاً",
-  "defaultSampleVitalTime": "7:30 صباحاً",
-  "defaultSampleMedication": "أملوديبين 5 مجم"
+  "prescriptionPatientRequired": "اختر المريض قبل مسح الروشتة.",
+  "pillImageTitle": "صورة الدواء",
+  "pillImageEmpty": "لم تتم إضافة صورة للدواء بعد",
+  "pillImageUnavailable": "صورة الدواء غير متاحة حاليًا",
+  "pillImageUploadButton": "إضافة أو تغيير الصورة",
+  "pillImageUploadSuccess": "تم حفظ صورة الدواء بأمان",
+  "pillImageUploadFailed": "تعذر حفظ صورة الدواء"
 }

@@ -129,8 +129,6 @@
   "triageNormal": "Normal",
   "triageBorderline": "Borderline",
   "triageCritical": "Critical",
-  "voiceVitalButton": "Voice Entry",
-  "voiceVitalConfirmTitle": "Confirm Voice Reading",
   "confirmSaveButton": "Confirm & Save",
   "noVitalsRecorded": "No readings recorded yet",
   "scanPrescriptionTitle": "Scan Prescription",
@@ -172,14 +170,13 @@
   "navTimeline": "Timeline",
   "navTrends": "Trends",
   "navInventoryComm": "Inventory & Care",
-  "navVoiceVitals": "Voice Vitals",
   "navSos": "SOS",
   "navNotifications": "Notifications",
   "navSettings": "Settings",
   "goodMorning": "Good Morning",
   "goodMorningGreeting": "Wishing you a healthy and happy day",
   "todayMedicationCardTitle": "Today's Medication",
-  "weeklyAdherenceTitle": "Weekly Medication Adherence",
+  "weeklyAdherenceTitle": "Today's Medication Adherence",
   "weeklyAdherenceSub": "{taken} of {total} doses",
   "@weeklyAdherenceSub": {
     "placeholders": {
@@ -192,6 +189,7 @@
     }
   },
   "weeklyAdherenceKeepUp": "Great job, keep it up",
+  "noPendingDose": "No dose is pending right now",
   "timeForMedicationTitle": "Time for Medication",
   "timeForMedicationTip": "Stay consistent with your medication schedule for better health",
   "tookItButton": "I Took It",
@@ -210,7 +208,14 @@
   "twiceDaily": "Twice daily",
   "unitMmHg": "mmHg",
   "unitMgDl": "mg/dL",
-  "lastReadingToday": "Last reading: Today",
+  "lastReadingAt": "Last reading: {time}",
+  "@lastReadingAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "escalationReminder15m": "+15 min: Reminder sent",
   "escalationFamily30m": "+30 min: Family members notified",
   "escalationDoctor60m": "+60 min: Escalate to doctor if dose remains missed",
@@ -237,9 +242,6 @@
   "expiresIn24HoursSub": "The link will automatically expire after 24 hours to protect patient privacy",
   "shareLinkButton": "Share Link",
   "downloadPdfButton": "Download PDF",
-  "voiceVitalTitle": "Voice Vitals",
-  "voiceVitalSubtitle": "Speak to log your vital signs easily",
-  "pressAndSpeak": "Press & Speak",
   "vitalLoggedSuccess": "Reading Logged",
   "reassuringStatusTitle": "Status Reassuring",
   "reassuringStatusSub": "Your reading is within normal range",
@@ -434,7 +436,11 @@
       }
     }
   },
-  "defaultSampleTime": "8:00 AM",
-  "defaultSampleVitalTime": "7:30 AM",
-  "defaultSampleMedication": "Amlodipine 5mg"
+  "prescriptionPatientRequired": "Select a patient before scanning a prescription.",
+  "pillImageTitle": "Medication photo",
+  "pillImageEmpty": "No medication photo added yet",
+  "pillImageUnavailable": "Medication photo is unavailable",
+  "pillImageUploadButton": "Add or change photo",
+  "pillImageUploadSuccess": "Medication photo saved securely",
+  "pillImageUploadFailed": "Could not save the medication photo"
 }

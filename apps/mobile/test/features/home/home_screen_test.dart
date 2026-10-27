@@ -27,23 +27,23 @@ class MockAlertsRepository extends Mock implements AlertsRepository;
 class _FakePatientAuthNotifier extends AuthNotifier {
   @override
   Future<UserModel?> build() async => const UserModel(
-        id: 'patient-test-1',
-        name: 'عم أحمد',
-        email: 'ahmed@test.com',
-        role: 'patient',
-        language: 'ar',
-      );
+    id: 'patient-test-1',
+    name: 'عم أحمد',
+    email: 'ahmed@test.com',
+    role: 'patient',
+    language: 'ar',
+  );
 }
 
 class _FakeCaregiverAuthNotifier extends AuthNotifier {
   @override
   Future<UserModel?> build() async => const UserModel(
-        id: 'caregiver-test-1',
-        name: 'سارة',
-        email: 'sara@test.com',
-        role: 'caregiver',
-        language: 'ar',
-      );
+    id: 'caregiver-test-1',
+    name: 'سارة',
+    email: 'sara@test.com',
+    role: 'caregiver',
+    language: 'ar',
+  );
 }
 
 class _PreselectedPatientNotifier extends SelectedPatientIdNotifier {
@@ -72,18 +72,19 @@ void main() {
     vitalsRepository = MockVitalsRepository();
     alertsRepository = MockAlertsRepository();
 
-    when(() => medicationRepository.getTodayDoses(any()))
-        .thenAnswer((_) async => const [
-              TodayDoseModel(
-                scheduleId: 'sched-1',
-                medicationId: 'med-1',
-                medicationName: 'Amlodipine 5mg',
-                timeOfDay: '08:00',
-                doseAmount: 1,
-                mealRelation: 'after_meal',
-                status: 'pending',
-              ),
-            ]);
+    when(() => medicationRepository.getTodayDoses(any())).thenAnswer(
+      (_) async => const [
+        TodayDoseModel(
+          scheduleId: 'sched-1',
+          medicationId: 'med-1',
+          medicationName: 'Amlodipine 5mg',
+          timeOfDay: '08:00',
+          doseAmount: 1,
+          mealRelation: 'after_meal',
+          status: 'pending',
+        ),
+      ],
+    );
     when(() => medicationRepository.listMedications(any()))
         .thenAnswer((_) async => const []);
     when(() => caregiverRepository.listLinkedPatients())
@@ -139,8 +140,9 @@ void main() {
     );
   }
 
-  testWidgets('HomeScreen renders patient shell and navigates across tabs',
-      (tester) async {
+  testWidgets('HomeScreen renders patient shell and navigates across tabs', (
+    tester,
+  ) async {
     useTallSurface(tester);
     await tester.pumpWidget(buildPatientShellApp());
     await tester.pumpAndSettle();
@@ -170,7 +172,6 @@ void main() {
     // 5. Switch to Tab 3 (More Hub)
     await tester.tap(find.text('المزيد'));
     await tester.pumpAndSettle();
-    expect(find.text('القياس بالصوت'), findsOneWidget);
     expect(find.text('مسح الروشتة'), findsOneWidget);
     expect(find.text('المخزون والتواصل'), findsOneWidget);
     expect(find.text('تقرير الطبيب (PDF)'), findsOneWidget);
@@ -179,43 +180,67 @@ void main() {
     // 6. Switch back to Home Tab
     await tester.tap(find.text('الرئيسية'));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('open_dose_reminder_card')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('open_dose_reminder_card')),
+      findsOneWidget,
+    );
     expect(find.byKey(const ValueKey('sos_trigger_btn')), findsOneWidget);
   });
 
-  testWidgets('HomeScreen renders caregiver shell with action buttons and tabs',
-      (tester) async {
-    useTallSurface(tester);
-    await tester.pumpWidget(buildCaregiverShellApp());
-    await tester.pumpAndSettle();
+  testWidgets(
+    'HomeScreen renders caregiver shell with action buttons and tabs',
+    (tester) async {
+      useTallSurface(tester);
+      await tester.pumpWidget(buildCaregiverShellApp());
+      await tester.pumpAndSettle();
 
-    // 1. Verify Caregiver Shell title and greeting
-    expect(find.text('لوحة متابعة المرافق'), findsOneWidget);
-    expect(find.textContaining('سارة'), findsOneWidget);
+      // 1. Verify Caregiver Shell title and greeting
+      expect(find.text('لوحة متابعة المرافق'), findsOneWidget);
+      expect(find.textContaining('سارة'), findsOneWidget);
 
-    // 2. Action buttons (Link patient / Doctor report)
-    expect(find.text('ربط حساب مريض'), findsOneWidget);
-    expect(find.text('تقرير الطبيب (PDF)'), findsOneWidget);
+      // 2. Action buttons (Link patient / Doctor report)
+      expect(find.text('ربط حساب مريض'), findsOneWidget);
+      expect(find.text('تقرير الطبيب (PDF)'), findsOneWidget);
 
-    // 3. Bottom nav destinations for Caregiver
-    expect(find.text('الرئيسية'), findsOneWidget);
-    expect(find.text('الجدول الزمني'), findsOneWidget);
-    expect(find.text('القياسات'), findsOneWidget);
-    expect(find.text('المخزون والتواصل'), findsOneWidget);
+      // 3. Bottom nav destinations for Caregiver
+      expect(find.text('الرئيسية'), findsOneWidget);
+      expect(find.text('الجدول الزمني'), findsOneWidget);
+      expect(find.text('القياسات'), findsOneWidget);
+      expect(find.text('المخزون والتواصل'), findsOneWidget);
 
-    // 4. Switch to Timeline tab
-    await tester.tap(find.text('الجدول الزمني'));
-    await tester.pumpAndSettle();
-    expect(find.text('Amlodipine 5mg'), findsOneWidget);
+      // 4. Switch to Timeline tab
+      await tester.tap(find.text('الجدول الزمني'));
+      await tester.pumpAndSettle();
+      expect(find.text('Amlodipine 5mg'), findsOneWidget);
 
-    // 5. Switch to Trends tab
-    await tester.tap(find.text('القياسات'));
-    await tester.pumpAndSettle();
-    expect(find.text('اتجاهات القياسات'), findsOneWidget);
+      // 5. Switch to Trends tab
+      await tester.tap(find.text('القياسات'));
+      await tester.pumpAndSettle();
+      expect(find.text('اتجاهات القياسات'), findsOneWidget);
 
-    // 6. Switch to Inventory tab
-    await tester.tap(find.text('المخزون والتواصل'));
-    await tester.pumpAndSettle();
-    expect(find.text('المخزون الحالي'), findsOneWidget);
-  });
+      // 6. Switch to Inventory tab
+      await tester.tap(find.text('المخزون والتواصل'));
+      await tester.pumpAndSettle();
+      expect(find.text('المخزون الحالي'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'empty patient data does not show sample medication or adherence',
+    (tester) async {
+      useTallSurface(tester);
+      when(() => medicationRepository.getTodayDoses(any()))
+          .thenAnswer((_) async => const []);
+
+      await tester.pumpWidget(buildPatientShellApp());
+      await tester.pumpAndSettle();
+
+      expect(find.text('لا توجد جرعات مجدولة لليوم'), findsWidgets);
+      expect(find.text('لا توجد جرعة معلّقة الآن'), findsOneWidget);
+      expect(find.text('Amlodipine 5mg'), findsNothing);
+      expect(find.text('أملوديبين 5 مجم'), findsNothing);
+      expect(find.text('6 من 7 جرعات'), findsNothing);
+      expect(find.text('85%'), findsNothing);
+    },
+  );
 }

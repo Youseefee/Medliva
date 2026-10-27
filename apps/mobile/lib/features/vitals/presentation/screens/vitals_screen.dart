@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/vitals/data/vitals_repository.dart';
 import 'package:medliva/features/vitals/domain/models/vital.dart';
-import 'package:medliva/features/vitals/presentation/screens/voice_vital_entry.dart';
 import 'package:medliva/l10n/app_localizations.dart';
 
 class VitalsNotifier extends AsyncNotifier<List<VitalReadingModel>> {
@@ -33,8 +32,8 @@ class VitalsNotifier extends AsyncNotifier<List<VitalReadingModel>> {
 
 final vitalsNotifierProvider =
     AsyncNotifierProvider<VitalsNotifier, List<VitalReadingModel>>(
-  VitalsNotifier.new,
-);
+      VitalsNotifier.new,
+    );
 
 class VitalsScreen extends ConsumerStatefulWidget {
   const VitalsScreen({super.key});
@@ -120,7 +119,9 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
 
     setState(() => _isSaving = true);
     try {
-      await ref.read(vitalsNotifierProvider.notifier).addVital(
+      await ref
+          .read(vitalsNotifierProvider.notifier)
+          .addVital(
             VitalCreateInput(
               type: _selectedType,
               valuePrimary: primaryVal,
@@ -152,30 +153,27 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
 
     final readings = vitalsAsync.value ?? const [];
     final latestBp = readings.where((r) => r.type == 'bp').firstOrNull;
-    final latestGlucose =
-        readings.where((r) => r.type == 'glucose').firstOrNull;
-    final bpText = latestBp != null
-        ? (latestBp.valueSecondary != null
+    final latestGlucose = readings
+        .where((r) => r.type == 'glucose')
+        .firstOrNull;
+    final bpText = latestBp == null
+        ? null
+        : (latestBp.valueSecondary != null
               ? '${latestBp.valuePrimary.toInt()} / ${latestBp.valueSecondary!.toInt()}'
-              : '${latestBp.valuePrimary.toInt()}')
-        : '120 / 80';
-    final bpBand = latestBp?.band ?? 'normal';
-    final glucoseText = latestGlucose != null
-        ? '${latestGlucose.valuePrimary.toInt()}'
-        : '160';
-    final glucoseBand = latestGlucose?.band ?? 'borderline';
+              : '${latestBp.valuePrimary.toInt()}');
+    final glucoseText = latestGlucose == null
+        ? null
+        : '${latestGlucose.valuePrimary.toInt()}';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.vitalsTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.vitalsTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsetsDirectional.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Manual & Voice Entry Card
+              // Manual Entry Card
               Card(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -252,37 +250,15 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 54,
-                              child: ElevatedButton.icon(
-                                key: const ValueKey('submit_vital_btn'),
-                                onPressed: _isSaving ? null : _submitManual,
-                                icon: const Icon(Icons.add_chart_rounded),
-                                label: Text(l10n.addVitalButton),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: SizedBox(
-                              height: 54,
-                              child: OutlinedButton.icon(
-                                key: const ValueKey('voice_vital_btn'),
-                                onPressed: _isSaving
-                                    ? null
-                                    : () => startVoiceVitalEntryFlow(
-                                          context: context,
-                                          ref: ref,
-                                        ),
-                                icon: const Icon(Icons.mic_rounded),
-                                label: Text(l10n.voiceVitalButton),
-                              ),
-                            ),
-                          ),
-                        ],
+                      SizedBox(
+                        height: 54,
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          key: const ValueKey('submit_vital_btn'),
+                          onPressed: _isSaving ? null : _submitManual,
+                          icon: const Icon(Icons.add_chart_rounded),
+                          label: Text(l10n.addVitalButton),
+                        ),
                       ),
                     ],
                   ),
@@ -301,7 +277,8 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                         Text(err.toString(), textAlign: TextAlign.center),
                         const SizedBox(height: 8),
                         ElevatedButton.icon(
-                          onPressed: () => ref.invalidate(vitalsNotifierProvider),
+                          onPressed: () =>
+                              ref.invalidate(vitalsNotifierProvider),
                           icon: const Icon(Icons.refresh_rounded),
                           label: Text(l10n.retry),
                         ),
@@ -336,8 +313,7 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                       return Card(
                         key: ValueKey('vital_card_${r.id}'),
                         child: ListTile(
-                          contentPadding:
-                              const EdgeInsetsDirectional.symmetric(
+                          contentPadding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 16,
                             vertical: 10,
                           ),
@@ -415,40 +391,62 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          bpText,
-                          style: theme.textTheme.headlineLarge?.copyWith(
-                            color: const Color(0xFF0F2942),
+                        if (vitalsAsync.isLoading && !vitalsAsync.hasValue)
+                          const SizedBox(
+                            height: 32,
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        else
+                          Text(
+                            bpText ??
+                                (vitalsAsync.hasError
+                                    ? l10n.errorOccurred
+                                    : l10n.noVitalsRecorded),
+                            style: bpText == null
+                                ? theme.textTheme.bodyLarge
+                                : theme.textTheme.headlineLarge?.copyWith(
+                                    color: const Color(0xFF0F2942),
+                                  ),
                           ),
-                        ),
-                        Text(
-                          l10n.unitMmHg,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
+                        if (latestBp != null) ...[
+                          Text(
+                            l10n.unitMmHg,
+                            style: theme.textTheme.bodyMedium,
                           ),
-                          decoration: BoxDecoration(
-                            color: _bandColor(bpBand).withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _summaryBandLabel(l10n, bpBand),
-                            style: TextStyle(
-                              color: _bandColor(bpBand),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _bandColor(latestBp.band)
+                                  .withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _summaryBandLabel(l10n, latestBp.band),
+                              style: TextStyle(
+                                color: _bandColor(latestBp.band),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
-                          style: theme.textTheme.bodySmall,
-                        ),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.lastReadingAt(
+                              MaterialLocalizations.of(context).formatTimeOfDay(
+                                TimeOfDay.fromDateTime(
+                                  latestBp.recordedAt.toLocal(),
+                                ),
+                              ),
+                            ),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -489,41 +487,62 @@ class _VitalsScreenState extends ConsumerState<VitalsScreen> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          glucoseText,
-                          style: theme.textTheme.headlineLarge?.copyWith(
-                            color: const Color(0xFF0F2942),
+                        if (vitalsAsync.isLoading && !vitalsAsync.hasValue)
+                          const SizedBox(
+                            height: 32,
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        else
+                          Text(
+                            glucoseText ??
+                                (vitalsAsync.hasError
+                                    ? l10n.errorOccurred
+                                    : l10n.noVitalsRecorded),
+                            style: glucoseText == null
+                                ? theme.textTheme.bodyLarge
+                                : theme.textTheme.headlineLarge?.copyWith(
+                                    color: const Color(0xFF0F2942),
+                                  ),
                           ),
-                        ),
-                        Text(
-                          l10n.unitMgDl,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsetsDirectional.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
+                        if (latestGlucose != null) ...[
+                          Text(
+                            l10n.unitMgDl,
+                            style: theme.textTheme.bodyMedium,
                           ),
-                          decoration: BoxDecoration(
-                            color:
-                                _bandColor(glucoseBand).withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _summaryBandLabel(l10n, glucoseBand),
-                            style: TextStyle(
-                              color: _bandColor(glucoseBand),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsetsDirectional.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _bandColor(latestGlucose.band)
+                                  .withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _summaryBandLabel(l10n, latestGlucose.band),
+                              style: TextStyle(
+                                color: _bandColor(latestGlucose.band),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${l10n.lastReadingToday} ${l10n.defaultSampleVitalTime}',
-                          style: theme.textTheme.bodySmall,
-                        ),
+                          const SizedBox(height: 8),
+                          Text(
+                            l10n.lastReadingAt(
+                              MaterialLocalizations.of(context).formatTimeOfDay(
+                                TimeOfDay.fromDateTime(
+                                  latestGlucose.recordedAt.toLocal(),
+                                ),
+                              ),
+                            ),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
                       ],
                     ),
                   ),

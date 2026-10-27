@@ -1,87 +1,94 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/prescription/domain/models/prescription.dart';
+import 'package:medliva/features/storage/data/supabase_image_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-abstract class PrescriptionImagePicker {
-  Future<XFile?> pickImage(ImageSource source);
+typedef PrescriptionImagePicker = MediaImagePicker;
+
+abstract class PrescriptionOcrGateway {
+  Future<Map<String, dynamic>> scanPrescription({
+    required String patientId,
+    required String imagePath,
+    required String fileName,
+  });
 }
 
-class DevicePrescriptionImagePicker implements PrescriptionImagePicker {
-  DevicePrescriptionImagePicker({ImagePicker? picker})
-      : _picker = picker ?? ImagePicker();
+class SupabasePrescriptionOcrGateway implements PrescriptionOcrGateway {
+  SupabasePrescriptionOcrGateway(this._client);
 
-  final ImagePicker _picker;
+  final SupabaseClient _client;
 
   @override
-  Future<XFile?> pickImage(ImageSource source) {
-    return _picker.pickImage(source: source);
+  Future<Map<String, dynamic>> scanPrescription({
+    required String patientId,
+    required String imagePath,
+    required String fileName,
+  }) async {
+    final response = await _client.functions.invoke(
+      'scan-prescription',
+      body: {
+        'patient_id': patientId,
+        'image_path': imagePath,
+        'file_name': fileName,
+      },
+    );
+    final data = response.data;
+    if (response.status < 200 || response.status >= 300) {
+      throw FunctionException(
+        status: response.status,
+        details: data,
+        reasonPhrase: 'Prescription scan failed',
+      );
+    }
+    if (data is! Map) {
+      throw const FormatException('Invalid prescription scan response.');
+    }
+    return Map<String, dynamic>.from(data);
   }
 }
-
-final prescriptionImagePickerProvider =
-    Provider<PrescriptionImagePicker>((ref) {
-  return DevicePrescriptionImagePicker();
-});
 
 class PrescriptionRepository {
-  PrescriptionRepository({required ApiClient apiClient})
-      : _apiClient = apiClient;
+  PrescriptionRepository({
+    required PrescriptionOcrGateway ocrGateway,
+    required SupabaseImageRepository imageRepository,
+  }) : _ocrGateway = ocrGateway,
+       _imageRepository = imageRepository;
 
-  final ApiClient _apiClient;
+  final PrescriptionOcrGateway _ocrGateway;
+  final SupabaseImageRepository _imageRepository;
 
-  Future<PrescriptionScanResult> scanPrescription(XFile file) async {
-    try {
-      final bytes = await file.readAsBytes();
-      final formData = FormData.fromMap({
-        'file': MultipartFile.fromBytes(bytes, filename: file.name),
-      });
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/ai/scan-prescription',
-        data: formData,
-      );
-      return PrescriptionScanResult.fromJson(res.data!);
-    } catch (e) {
-      if (e is DioException &&
-          (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return _fallbackPrescriptionScanResult();
-    }
-  }
-
-  PrescriptionScanResult _fallbackPrescriptionScanResult() {
-    return const PrescriptionScanResult(
-      medications: [
-        ExtractedDrugModel(
-          drugTradeName: 'كونكور',
-          activeIngredient: 'بيسوبرولول',
-          dosageMg: '5',
-          frequencyPerDay: 1,
-          mealRelation: 'before_meal',
-          times: ['08:00'],
-          inventoryPills: 30,
-          confidenceScore: 0.85,
-        ),
-        ExtractedDrugModel(
-          drugTradeName: 'جلوكوفاج',
-          activeIngredient: 'ميتفورمين',
-          dosageMg: '1000',
-          frequencyPerDay: 1,
-          mealRelation: 'after_meal',
-          times: ['14:00'],
-          inventoryPills: 30,
-          confidenceScore: 0.88,
-        ),
-      ],
-      confidence: 0.88,
+  Future<PrescriptionScanResult> scanPrescription(
+    XFile file, {
+    required String patientId,
+  }) async {
+    final imagePath = await _imageRepository.uploadPrescriptionImage(
+      patientId: patientId,
+      bytes: await file.readAsBytes(),
+      fileName: file.name,
+      mimeType: file.mimeType,
     );
+    final result = await _ocrGateway.scanPrescription(
+      patientId: patientId,
+      imagePath: imagePath,
+      fileName: file.name,
+    );
+    return PrescriptionScanResult.fromJson(result);
   }
 }
 
+final prescriptionImagePickerProvider = Provider<PrescriptionImagePicker>(
+  (ref) => ref.watch(mediaImagePickerProvider),
+);
+
+final prescriptionOcrGatewayProvider = Provider<PrescriptionOcrGateway>(
+  (ref) => SupabasePrescriptionOcrGateway(ref.watch(supabaseClientProvider)),
+);
+
 final prescriptionRepositoryProvider = Provider<PrescriptionRepository>((ref) {
-  return PrescriptionRepository(apiClient: ref.watch(apiClientProvider));
+  return PrescriptionRepository(
+    ocrGateway: ref.watch(prescriptionOcrGatewayProvider),
+    imageRepository: ref.watch(supabaseImageRepositoryProvider),
+  );
 });

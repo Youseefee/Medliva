@@ -19,7 +19,6 @@ import 'package:medliva/features/prescription/presentation/screens/prescription_
 import 'package:medliva/features/reports/presentation/screens/doctor_report_screen.dart';
 import 'package:medliva/features/vitals/presentation/screens/vitals_screen.dart';
 import 'package:medliva/features/vitals/presentation/screens/vitals_trends_screen.dart';
-import 'package:medliva/features/vitals/presentation/screens/voice_vital_entry.dart';
 
 final _routerRefreshProvider = Provider<ValueNotifier<int>>((ref) {
   final notifier = ValueNotifier<int>(0);
@@ -151,10 +150,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/medications/reminder',
         builder: (context, state) => const DoseReminderScreen(),
-      ),
-      GoRoute(
-        path: '/vitals/voice',
-        builder: (context, state) => const VoiceVitalsScreen(),
       ),
       GoRoute(
         path: '/vitals/trends',

@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/core/storage/token_storage.dart';
 import 'package:medliva/features/auth/data/auth_repository.dart';
 import 'package:medliva/features/auth/domain/models/user.dart';
@@ -13,18 +12,8 @@ final tokenStorageProvider = Provider<TokenStorage>(
   (ref) => TokenStorage(supabaseClient: ref.watch(supabaseClientProvider)),
 );
 
-final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(
-    tokenStorage: ref.watch(tokenStorageProvider),
-    onUnauthorized: () async {
-      ref.invalidate(authNotifierProvider);
-    },
-  );
-});
-
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
-    apiClient: ref.watch(apiClientProvider),
     tokenStorage: ref.watch(tokenStorageProvider),
     supabaseClient: ref.watch(supabaseClientProvider),
   );

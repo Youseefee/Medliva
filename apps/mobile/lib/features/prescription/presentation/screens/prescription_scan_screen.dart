@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/medications/domain/models/medication.dart';
 import 'package:medliva/features/medications/presentation/screens/medication_list_screen.dart';
 import 'package:medliva/features/prescription/data/prescription_repository.dart';
@@ -48,6 +49,17 @@ class _PrescriptionScanScreenState
 
   Future<void> _pickAndScan(ImageSource source) async {
     final l10n = AppLocalizations.of(context)!;
+    final patientId = ref.read(currentPatientIdProvider);
+    if (patientId == null || patientId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.prescriptionPatientRequired),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final picker = ref.read(prescriptionImagePickerProvider);
@@ -55,7 +67,10 @@ class _PrescriptionScanScreenState
       if (file == null) return;
 
       final repo = ref.read(prescriptionRepositoryProvider);
-      final scanResult = await repo.scanPrescription(file);
+      final scanResult = await repo.scanPrescription(
+        file,
+        patientId: patientId,
+      );
       if (!mounted) return;
 
       for (final old in _items) {
@@ -160,9 +175,7 @@ class _PrescriptionScanScreenState
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.scanPrescriptionTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.scanPrescriptionTitle)),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsetsDirectional.all(20),
@@ -325,9 +338,9 @@ class _PrescriptionScanScreenState
                                   Container(
                                     padding:
                                         const EdgeInsetsDirectional.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
                                     decoration: BoxDecoration(
                                       color: isHighConf
                                           ? const Color(0xFFE8F5E9)

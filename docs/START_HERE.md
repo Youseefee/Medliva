@@ -2,40 +2,39 @@
 
 ## قراءة سريعة للإيجنت
 
-1. اقرأ `AGENTS.md`.
-2. حدّد الجزء المطلوب: `apps/mobile` أو `services/api` أو `apps/doctor-portal`.
-3. اقرأ الوثيقة المرتبطة بالمهمة فقط؛ لا تبدأ بتحميل كل ملفات `docs/`.
-4. افحص الكود والاختبارات قبل اعتبار أي شيء “منفّذاً”.
+1. اقرأ AGENTS.md.
+2. حدّد الجزء المطلوب: apps/mobile أو supabase أو docs.
+3. اقرأ الوثيقة المرتبطة بالمهمة فقط؛ لا تبدأ بتحميل كل ملفات docs.
+4. افحص الكود والاختبارات قبل اعتبار أي شيء منفّذًا.
 
 ## الحالة الحالية
 
 | الجزء | الحالة الفعلية من الكود |
 |---|---|
-| `services/api` | FastAPI يتحقق من جلسات Supabase Auth ويزامن ملف المستخدم، ويضم caregiver (بما في ذلك تصعيد الجرعات الفائتة بعد 15 دقيقة)، medications/adherence، vitals، AI (قراءة صورة الروشتة عبر Gemini Vision اختيارياً مع بديل نصي، بدون اختلاق أي دواء)، inventory، emergency (SOS + جهات الاتصال + `GET /patients/{id}/alerts`)، reports (ملخص تقرير الطبيب + رابط مشاركة + PDF بخط عربي)، وdevices. |
-| `apps/mobile` | تطبيق Flutter يستخدم البريد وكلمة المرور عبر Supabase Auth، بلا دخول بالهاتف أو SMS/OTP. يشمل التوجيه حسب الدور (`/patient` و`/caregiver`)، الملف الشخصي واللغة، الأدوية وجرعات اليوم والتنبيهات المحلية (مربوطة فعلياً بجرعات اليوم) وطابور عدم الاتصال، ربط المرافق ولوحة المتابعة، القياسات الحيوية والإدخال الصوتي، مسح الروشتة، الطوارئ وزر SOS، المخزون وإعادة الطلب، مركز الإشعارات المبني على تغذية التنبيهات الحقيقية، وتقرير الطبيب PDF داخل التطبيق. |
-| `apps/doctor-portal` | استُبدلت البوابة المستقلة في الـ MVP بميزة توليد ومشاركة تقرير الطبيب بصيغة PDF مباشرة داخل تطبيق الموبايل (`DoctorReportScreen`). |
-| `docs/` | محدّثة ومتزامنة مع التنفيذ الفعلي (`API_SPEC.md` و`EXECUTION_PLAN.md`). |
-| `scripts/` | `services/api/scripts/seed_demo_data.py` يزرع بيانات عرض قابلة للتكرار (كتالوج الأدوية + سجل مريض تجريبي). |
+| apps/mobile | تطبيق Flutter للمريض والمرافق. يستخدم Supabase Auth وPostgREST/RPC وStorage وEdge Functions. يشمل الملف الشخصي، الأدوية والجرعات، القياسات، ربط المرافق، الطوارئ، المخزون، التنبيهات، وتقارير PDF ومشاركتها. |
+| supabase/migrations | تغييرات PostgreSQL وسياسات RLS ودوال RPC المستخدمة في التطبيق. |
+| supabase/functions | دالتا scan-prescription وpublic-report. |
+| apps/doctor-portal | البوابة المستقلة خارج MVP؛ الطبيب يتلقى تقرير PDF ينشأ من تطبيق الموبايل. |
 
 ## خريطة الملفات المهمة
 
 | لو بتشتغل على | ابدأ من | ثم راجع |
 |---|---|---|
-| Backend endpoint | `services/api/app/api/v1/endpoints/` | `schemas/`, `models/`, `tests/`, `docs/API_SPEC.md` |
-| Auth/security | `apps/mobile/lib/features/auth/` | `services/api/app/core/deps.py`, `tests/test_auth.py`, `docs/SECURITY.md` |
-| Medication/adherence | `services/api/app/api/v1/endpoints/medications.py` | `adherence.py`, `models/medication.py`, related tests |
-| Flutter screen/flow | `apps/mobile/lib/features/` | `core/router/`, `core/network/`, `lib/l10n/`, `test/` |
-| Architecture/data | `docs/ARCHITECTURE.md` | `docs/DATABASE.md`, `docs/API_SPEC.md` |
-| Product priority | `docs/USE_CASES.md` | `docs/MASTER_PLAN.md`, `docs/ROADMAP.md` |
+| Flutter screen/flow | apps/mobile/lib/features/ | core/router/، lib/l10n/، test/ |
+| Auth/security | apps/mobile/lib/features/auth/ | supabase/migrations وdocs/SECURITY.md |
+| Medication/adherence | apps/mobile/lib/features/medications/ | migrations الخاصة بالجرعات، docs/API_SPEC.md |
+| Supabase database/function | supabase/migrations أو supabase/functions/ | docs/DATABASE.md، docs/API_SPEC.md، docs/SECURITY.md |
+| Architecture/data | docs/ARCHITECTURE.md | docs/DATABASE.md، docs/API_SPEC.md |
+| Product priority | docs/USE_CASES.md | docs/MASTER_PLAN.md، docs/ROADMAP.md |
 
 ## الوثائق حسب نوعها
 
-- مصدر المنتج والأولوية: `USE_CASES.md`, `ROADMAP.md`.
-- العقود التقنية الحالية: `API_SPEC.md`, `DATABASE.md`, `ARCHITECTURE.md`.
-- قواعد العمل والأمان: `CONVENTIONS.md`, `SECURITY.md`.
-- `docs/original/`: مراجع أصلية كبيرة، لا تُقرأ في مهام الكود العادية.
-- `docs/tools/`: سكربتات توليد مستندات، لا تُفتح إلا لمهمة توثيق.
+- مصدر المنتج والأولوية: USE_CASES.md وROADMAP.md.
+- عقود Supabase الحالية: API_SPEC.md وDATABASE.md وARCHITECTURE.md.
+- قواعد العمل والأمان: CONVENTIONS.md وSECURITY.md.
+- docs/original/: مراجع كبيرة، لا تُقرأ في مهام الكود العادية.
+- docs/tools/: نواتج ومرفقات وثائقية؛ لا تُفتح إلا لمهمة توثيق.
 
 ## قاعدة البحث
 
-استخدم قائمة الملفات المتتبعة أو بحثاً يستبعد البيئة والملفات المولّدة. ابدأ بأضيق مسار ممكن، ثم وسّع البحث فقط إذا أثبتت الاختبارات أو imports وجود اعتماد إضافي.
+ابدأ بأضيق مسار ممكن، واستبعد الملفات المولّدة وبيئات الأدوات. وسّع البحث فقط إذا أثبتت الاختبارات أو imports وجود اعتماد إضافي.

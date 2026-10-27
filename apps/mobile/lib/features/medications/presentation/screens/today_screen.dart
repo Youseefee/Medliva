@@ -103,14 +103,11 @@ class TodayDosesNotifier extends AsyncNotifier<List<TodayDoseModel>> {
 
 final todayDosesNotifierProvider =
     AsyncNotifierProvider<TodayDosesNotifier, List<TodayDoseModel>>(
-  TodayDosesNotifier.new,
-);
+      TodayDosesNotifier.new,
+    );
 
 class TodayScreen extends ConsumerWidget {
-  const TodayScreen({
-    this.readOnly = false,
-    super.key,
-  });
+  const TodayScreen({this.readOnly = false, super.key});
 
   final bool readOnly;
 
@@ -299,7 +296,7 @@ class TodayScreen extends ConsumerWidget {
                         style: theme.textTheme.bodyMedium,
                       ),
                     ],
-                    if (!readOnly && dose.status == 'pending') ...[
+                    if (!readOnly && dose.isActionable) ...[
                       const SizedBox(height: 16),
                       Row(
                         children: [

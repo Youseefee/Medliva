@@ -1,104 +1,48 @@
-# المعمارية (Architecture)
+# المعمارية
 
 ## النظرة العامة
+
 ```mermaid
 flowchart LR
-  subgraph Mobile["Flutter App"]
-    UI["Patient / Caregiver UI"]
-    DB[("Drift SQLite")]
-    AL["Native Alarm Engine (Kotlin)"]
-    SQ["Sync Queue"]
-  end
-  subgraph Backend["Backend Services"]
-    API["FastAPI REST + WebSocket"]
-    CRON["Supabase Cron"]
-  end
-  subgraph Cloud["Cloud Infrastructure (Free Tier)"]
-    AUTH["Supabase Auth"]
-    PG[("PostgreSQL (Supabase)")]
-    S3[("Object Storage (Supabase)")]
-  end
-  UI --> DB --> AL
-  DB --> SQ --> API
-  UI --> AUTH
-  API --> AUTH
-  API --> PG
-  API --> S3
-  API --> AI["Gemini / Whisper"]
-  CRON --> API
-  API --> FCM["FCM"]
-  PORTAL["Doctor Portal (Next.js)"] --> API
+  App["تطبيق Flutter/Dart"] --> Auth["Supabase Auth"]
+  App -->|"PostgREST + RPC مع JWT وRLS"| DB[("Supabase PostgreSQL")]
+  App -->|"جلسة المستخدم وسياسات RLS"| Storage["Supabase Storage الخاص"]
+  App -->|"استدعاءات مصادق عليها"| Scan["Edge Function: scan-prescription"]
+  App -->|"رمز مشاركة مؤقت"| Report["Edge Function: public-report"]
+  Scan --> Gemini["Gemini Vision؛ المفتاح سرّ في Supabase"]
+  App --> Device["منبهات محلية وطابور جرعات آمن"]
 ```
 
-## طبقات تطبيق Flutter (Clean Architecture)
-- `presentation/` Widgets + Riverpod Notifiers
-- `domain/` Entities + UseCases + Repository interfaces
-- `data/` Drift DAOs + Dio remote sources + Repository impl
+## طبقات تطبيق Flutter
 
-## Offline-First
-1. كل كتابة تروح SQLite بحالة `pending` + `client_uuid`.
-2. الـ Sync Queue يبعت `POST /sync/batch` عند توفر الإنترنت (WorkManager كل 15 د + عند فتح التطبيق).
-3. السيرفر Idempotent على `client_uuid`.
-4. التعارض: السيرفر مرجع للأدوية/المواعيد، والجهاز مرجع لسجلات الجرعات.
-5. المنبهات تتجدول محلياً من SQLite فقط — لا تعتمد على السيرفر.
+- presentation/: الشاشات وWidgets وRiverpod Notifiers.
+- domain/: النماذج وعقود الميزات.
+- data/: مستودعات Supabase Auth/PostgREST/RPC/Storage وعمليات المزامنة المحلية.
 
-## المنبه الصارم (Android)
-- صلاحيات: `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM`, `USE_FULL_SCREEN_INTENT`, `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`, `POST_NOTIFICATIONS`.
-- `AlarmManager.setExactAndAllowWhileIdle()` + Full-Screen Intent.
-- `BootReceiver` يعيد جدولة كل المنبهات من SQLite.
-- إرشاد المستخدم لإيقاف Battery Optimization (خصوصاً Xiaomi/Oppo/Huawei).
+## العمليات والاتصال
 
-## Sequence: الجرعة والتصعيد
-```mermaid
-sequenceDiagram
-  participant A as Alarm (Device)
-  participant P as Patient
-  participant API
-  participant B as Supabase Cron
-  participant C as Caregiver
-  A->>P: Full-screen alarm + TTS
-  alt Taken
-    P->>API: POST /adherence/log (taken)
-    API-->>C: WebSocket update
-  else No response
-    B->>API: protected escalation job (every 60s)
-    API->>C: +30m Tier-1 FCM
-    API->>C: +60m Tier-2 FCM + call button
-  end
-```
+- Supabase Auth يدير تسجيل الدخول بالبريد وكلمة المرور والجلسات.
+- التطبيق يتصل بقاعدة Supabase مباشرة باستخدام المفتاح العام وجلسة المستخدم؛ سياسات RLS تحدد الصفوف المسموح بها.
+- عمليات الجرعات والقياسات والتصعيد التي تحتاج معاملة ذرية تنفذها دوال PostgreSQL المصرح بها.
+- صور الروشتات وصور الأدوية تحفظ في Storage الخاص، وتُقرأ بروابط موقعة بعد التحقق من RLS.
+- OCR يعمل في scan-prescription، ويقرأ الصورة والكتالوج بنطاق جلسة المستخدم؛ مفتاح Gemini يبقى في أسرار Supabase.
+- التقرير العام يمر عبر public-report ويتحقق من رمز مشاركة محدود الصلاحية.
 
-## Sequence: مسح الروشتة
-```mermaid
-sequenceDiagram
-  participant U as User
-  participant App
-  participant API
-  participant G as Gemini Vision
-  U->>App: Capture image
-  App->>API: POST /ai/scan-prescription
-  API->>G: image + JSON schema
-  G-->>API: structured meds
-  API->>API: fuzzy match drug DB
-  API-->>App: meds + confidence
-  U->>App: confirm / edit
-  App->>API: POST /medications (bulk)
-```
+## العمل دون اتصال والمنبهات
 
-## Sequence: القياس الصوتي
-```mermaid
-sequenceDiagram
-  participant P as Patient
-  participant App
-  participant API
-  participant W as Whisper
-  P->>App: Speak reading
-  App->>API: POST /ai/parse-voice-vitals (audio)
-  API->>W: transcribe
-  W-->>API: text
-  API->>API: parse numbers + triage rules
-  API-->>App: value + band
-  App->>P: TTS confirmation
-  opt Critical
-    API->>API: push alert to caregiver
-  end
-```
+1. تظل المنبهات محلية على الجهاز ولا تحتاج اتصالًا وقت الرنين.
+2. تُحفظ سجلات الجرعات التي لم تُرسل في طابور التخزين الآمن على الجهاز.
+3. عند عودة الاتصال، يعيد التطبيق إرسال السجلات إلى RPC record_intake_log مع client_uuid لمنع التكرار.
+4. عند نجاح التسجيل، تُحدّث حالة الجرعة ويُحدّث جدول المنبهات المحلي.
+
+## مسار الجرعة والقياس
+
+- الجرعة: Flutter ←→ record_intake_log؛ تحفظ الدالة السجل وتتعامل مع خصم المخزون والتنبيه عند انخفاضه.
+- القياس: Flutter ←→ record_vital؛ تتحقق الدالة من صلاحية الوصول وتحسب مستوى القراءة وتحفظ التنبيه الحرج في العملية نفسها.
+- تنبيهات المرافق تُقرأ من list_patient_alerts مع فحص ارتباط المريض بالمرافق.
+
+## إعدادات الأمان
+
+- لا تضع secret أو service_role في Flutter؛ استخدم المفتاح العام فقط.
+- أبقِ RLS مفعّلًا على الجداول المعروضة، وراجع سياسات الصفوف والتخزين مع كل تغيير.
+- استخدم أسرار Supabase للاتصالات الخارجية داخل Edge Functions.

@@ -1,217 +1,94 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/medications/domain/models/medication.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MedicationRepository {
-  MedicationRepository({
-    required ApiClient apiClient,
-    SupabaseClient? supabaseClient,
-  })  : _apiClient = apiClient,
-        _supabaseClient = supabaseClient;
+  MedicationRepository({SupabaseClient? supabaseClient})
+    : _supabaseClient = supabaseClient;
 
-  final ApiClient _apiClient;
   final SupabaseClient? _supabaseClient;
 
   SupabaseClient get _client => _supabaseClient ?? Supabase.instance.client;
 
   Future<List<MedicationModel>> listMedications(String patientId) async {
-    try {
-      final res = await _apiClient.dio.get<List<dynamic>>(
-        '/patients/$patientId/medications',
-      );
-      final data = res.data ?? const [];
-      return data
-          .map((e) => MedicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _listMedicationsFromSupabase(patientId);
-    } catch (_) {
-      return await _listMedicationsFromSupabase(patientId);
-    }
-  }
-
-  Future<List<MedicationModel>> _listMedicationsFromSupabase(
-    String patientId,
-  ) async {
-    final res = await _client
+    final response = await _client
         .from('medications')
         .select('*, schedules(*)')
         .eq('patient_id', patientId)
         .eq('is_active', true)
         .order('created_at', ascending: true);
 
-    final list = res as List<dynamic>;
-    return list
-        .map((e) => MedicationModel.fromJson(Map<String, dynamic>.from(e as Map)))
-        .where((m) => m.isActive)
-        .toList();
+    return (response as List<dynamic>).map((item) {
+      final medication = Map<String, dynamic>.from(item as Map);
+      final schedules = medication['schedules'];
+      if (schedules is List) {
+        medication['schedules'] = schedules.where((schedule) {
+          final row = Map<String, dynamic>.from(schedule as Map);
+          return row['is_active'] as bool? ?? true;
+        }).toList();
+      }
+      return MedicationModel.fromJson(medication);
+    }).toList();
   }
 
   Future<MedicationModel> createMedication(
     String patientId,
     MedicationCreateInput input,
   ) async {
-    try {
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/patients/$patientId/medications',
-        data: input.toJson(),
-      );
-      return MedicationModel.fromJson(res.data!);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _createMedicationInSupabase(patientId, input);
-    } catch (_) {
-      return await _createMedicationInSupabase(patientId, input);
-    }
-  }
-
-  Future<MedicationModel> _createMedicationInSupabase(
-    String patientId,
-    MedicationCreateInput input,
-  ) async {
-    final medRow = {
-      'patient_id': patientId,
-      'name': input.name,
-      if (input.tradeName != null) 'trade_name': input.tradeName,
-      if (input.activeIngredient != null)
-        'active_ingredient': input.activeIngredient,
-      'form': input.form,
-      if (input.strength != null) 'strength': input.strength,
-      'stock_count': input.stockCount,
-      'alert_threshold_days': input.alertThresholdDays,
-      if (input.expiryDate != null) 'expiry_date': input.expiryDate,
-      'is_active': true,
-    };
-
-    final medRes = await _client
-        .from('medications')
-        .insert(medRow)
-        .select()
-        .single();
-
-    final createdMed = Map<String, dynamic>.from(medRes);
-    final medId = createdMed['id'] as String;
-
-    final createdSchedules = <Map<String, dynamic>>[];
-    for (final s in input.schedules) {
-      final schedRow = {
-        'medication_id': medId,
-        'time_of_day': s.timeOfDay,
-        'dose_amount': s.doseAmount,
-        'meal_relation': s.mealRelation,
-        'days_mask': s.daysMask,
-        if (s.instructionsAr != null) 'instructions_ar': s.instructionsAr,
-        'is_active': true,
-      };
-      final schedRes = await _client
-          .from('schedules')
-          .insert(schedRow)
-          .select()
-          .single();
-      createdSchedules.add(Map<String, dynamic>.from(schedRes));
-    }
-
-    createdMed['schedules'] = createdSchedules;
-    return MedicationModel.fromJson(createdMed);
+    final medication = input.toJson();
+    final schedules = List<Map<String, dynamic>>.from(
+      medication.remove('schedules') as List,
+    );
+    final response = await _client.rpc<Map<String, dynamic>>(
+      'create_medication_with_schedules',
+      params: {
+        'p_patient_id': patientId,
+        'p_medication': medication,
+        'p_schedules': schedules,
+      },
+    );
+    return MedicationModel.fromJson(_asRow(response));
   }
 
   Future<MedicationModel> updateMedication(
     String medicationId,
     MedicationUpdateInput input,
   ) async {
-    try {
-      final res = await _apiClient.dio.patch<Map<String, dynamic>>(
-        '/medications/$medicationId',
-        data: input.toJson(),
-      );
-      return MedicationModel.fromJson(res.data!);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _updateMedicationInSupabase(medicationId, input);
-    } catch (_) {
-      return await _updateMedicationInSupabase(medicationId, input);
-    }
-  }
-
-  Future<MedicationModel> _updateMedicationInSupabase(
-    String medicationId,
-    MedicationUpdateInput input,
-  ) async {
-    final updated = await _client
-        .from('medications')
-        .update(input.toJson())
-        .eq('id', medicationId)
-        .select('*, schedules(*)')
-        .single();
-    return MedicationModel.fromJson(Map<String, dynamic>.from(updated));
+    final updates = input.toJson();
+    final query = _client.from('medications');
+    final response = updates.isEmpty
+        ? await query.select('*, schedules(*)').eq('id', medicationId).single()
+        : await query
+              .update(updates)
+              .eq('id', medicationId)
+              .select('*, schedules(*)')
+              .single();
+    return MedicationModel.fromJson(Map<String, dynamic>.from(response));
   }
 
   Future<void> deleteMedication(String medicationId) async {
-    try {
-      await _apiClient.dio.delete<Map<String, dynamic>>(
-        '/medications/$medicationId',
-      );
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      await _client
-          .from('medications')
-          .update({'is_active': false})
-          .eq('id', medicationId);
-    } catch (_) {
-      await _client
-          .from('medications')
-          .update({'is_active': false})
-          .eq('id', medicationId);
+    final response = await _client
+        .from('medications')
+        .update({'is_active': false})
+        .eq('id', medicationId)
+        .select('id')
+        .maybeSingle();
+    if (response == null) {
+      throw StateError('The medication does not exist or is not accessible.');
     }
   }
 
   Future<List<ScheduleModel>> listSchedules(String medicationId) async {
-    try {
-      final res = await _apiClient.dio.get<List<dynamic>>(
-        '/medications/$medicationId/schedules',
-      );
-      final data = res.data ?? const [];
-      return data
-          .map((e) => ScheduleModel.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _listSchedulesFromSupabase(medicationId);
-    } catch (_) {
-      return await _listSchedulesFromSupabase(medicationId);
-    }
-  }
-
-  Future<List<ScheduleModel>> _listSchedulesFromSupabase(
-    String medicationId,
-  ) async {
-    final res = await _client
+    final response = await _client
         .from('schedules')
         .select()
-        .eq('medication_id', medicationId)
-        .eq('is_active', true);
-    final list = res as List<dynamic>;
-    return list
-        .map((e) => ScheduleModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .eq('medication_id', medicationId);
+    return (response as List<dynamic>)
+        .map(
+          (item) =>
+              ScheduleModel.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
         .toList();
   }
 
@@ -219,313 +96,147 @@ class MedicationRepository {
     String medicationId,
     ScheduleCreateInput input,
   ) async {
-    try {
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/medications/$medicationId/schedules',
-        data: input.toJson(),
-      );
-      return ScheduleModel.fromJson(res.data!);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _createScheduleInSupabase(medicationId, input);
-    } catch (_) {
-      return await _createScheduleInSupabase(medicationId, input);
-    }
-  }
-
-  Future<ScheduleModel> _createScheduleInSupabase(
-    String medicationId,
-    ScheduleCreateInput input,
-  ) async {
-    final schedRow = {
-      'medication_id': medicationId,
-      'time_of_day': input.timeOfDay,
-      'dose_amount': input.doseAmount,
-      'meal_relation': input.mealRelation,
-      'days_mask': input.daysMask,
-      if (input.instructionsAr != null) 'instructions_ar': input.instructionsAr,
-      'is_active': true,
-    };
-    final res = await _client
+    final response = await _client
         .from('schedules')
-        .insert(schedRow)
+        .insert({
+          'medication_id': medicationId,
+          ...input.toJson(),
+          'is_active': true,
+        })
         .select()
         .single();
-    return ScheduleModel.fromJson(Map<String, dynamic>.from(res));
+    return ScheduleModel.fromJson(Map<String, dynamic>.from(response));
   }
 
   Future<List<TodayDoseModel>> getTodayDoses(String patientId) async {
-    try {
-      final res = await _apiClient.dio.get<List<dynamic>>(
-        '/patients/$patientId/today',
-      );
-      final data = res.data ?? const [];
-      return data
-          .map((e) => TodayDoseModel.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _getTodayDosesFromSupabase(patientId);
-    } catch (_) {
-      return await _getTodayDosesFromSupabase(patientId);
-    }
-  }
-
-  Future<List<TodayDoseModel>> _getTodayDosesFromSupabase(
-    String patientId,
-  ) async {
-    // 1. Fetch active medications with schedules
-    final medsRes = await _client
+    final medicationsResponse = await _client
         .from('medications')
         .select('id, name, is_active, schedules(*)')
         .eq('patient_id', patientId)
         .eq('is_active', true);
-
-    final meds = (medsRes as List<dynamic>)
-        .map((m) => Map<String, dynamic>.from(m as Map))
+    final medications = (medicationsResponse as List<dynamic>)
+        .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
+    if (medications.isEmpty) return const [];
 
-    if (meds.isEmpty) return const [];
-
-    // 2. Fetch today's intake logs for patient
-    final now = DateTime.now();
-    final startOfToday = DateTime.utc(now.year, now.month, now.day, 0, 0, 0);
-    final endOfToday =
-        DateTime.utc(now.year, now.month, now.day, 23, 59, 59, 999);
-
-    final logsRes = await _client
+    final now = DateTime.now().toUtc();
+    final startOfToday = DateTime.utc(now.year, now.month, now.day);
+    final endOfToday = startOfToday.add(const Duration(days: 1));
+    final logsResponse = await _client
         .from('intake_logs')
         .select()
         .eq('patient_id', patientId)
         .gte('scheduled_time', startOfToday.toIso8601String())
-        .lte('scheduled_time', endOfToday.toIso8601String());
-
-    final logs = (logsRes as List<dynamic>)
-        .map((l) => Map<String, dynamic>.from(l as Map))
+        .lt('scheduled_time', endOfToday.toIso8601String());
+    final logs = (logsResponse as List<dynamic>)
+        .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
 
     final logsBySchedule = <String, Map<String, dynamic>>{};
-    for (final l in logs) {
-      final schedId = l['schedule_id']?.toString();
-      if (schedId != null) {
-        logsBySchedule[schedId] = l;
-      }
+    for (final log in logs) {
+      final scheduleId = log['schedule_id']?.toString();
+      if (scheduleId != null) logsBySchedule[scheduleId] = log;
     }
 
     final doses = <TodayDoseModel>[];
+    for (final medication in medications) {
+      final medicationId = medication['id'].toString();
+      final medicationName = medication['name'] as String;
+      final schedules = medication['schedules'] as List<dynamic>? ?? const [];
 
-    for (final med in meds) {
-      final medId = med['id'] as String;
-      final medName = med['name'] as String;
-      final rawSchedules = med['schedules'] as List<dynamic>? ?? const [];
+      for (final item in schedules) {
+        final schedule = Map<String, dynamic>.from(item as Map);
+        if (!(schedule['is_active'] as bool? ?? true)) continue;
 
-      for (final sRaw in rawSchedules) {
-        final s = Map<String, dynamic>.from(sRaw as Map);
-        final isActive = s['is_active'] as bool? ?? true;
-        if (!isActive) continue;
-
-        final scheduleId = s['id'] as String;
-        final rawTime = s['time_of_day'] as String;
-        final timeOfDay =
-            rawTime.length >= 5 ? rawTime.substring(0, 5) : rawTime;
-
+        final scheduleId = schedule['id'].toString();
         final log = logsBySchedule[scheduleId];
-        final status =
-            log != null ? (log['status'] as String? ?? 'taken') : 'pending';
-        final intakeLogId = log != null ? log['id'] as String? : null;
-        final actualTime = log != null && log['actual_time'] != null
-            ? DateTime.parse(log['actual_time'] as String)
-            : null;
-
+        final rawTime = schedule['time_of_day'] as String;
+        final actualTime = log?['actual_time'];
         doses.add(
           TodayDoseModel(
             scheduleId: scheduleId,
-            medicationId: medId,
-            medicationName: medName,
-            timeOfDay: timeOfDay,
-            doseAmount: (s['dose_amount'] as num?)?.toDouble() ?? 1.0,
-            mealRelation: s['meal_relation'] as String? ?? 'after_meal',
-            instructionsAr: s['instructions_ar'] as String?,
-            status: status,
-            intakeLogId: intakeLogId,
-            actualTime: actualTime,
+            medicationId: medicationId,
+            medicationName: medicationName,
+            timeOfDay: rawTime.length >= 5 ? rawTime.substring(0, 5) : rawTime,
+            doseAmount: (schedule['dose_amount'] as num?)?.toDouble() ?? 1,
+            mealRelation: schedule['meal_relation'] as String? ?? 'after_meal',
+            instructionsAr: schedule['instructions_ar'] as String?,
+            status: log?['status'] as String? ?? 'pending',
+            intakeLogId: log?['id']?.toString(),
+            actualTime: actualTime == null
+                ? null
+                : DateTime.parse(actualTime as String),
           ),
         );
       }
     }
 
-    doses.sort((a, b) => a.timeOfDay.compareTo(b.timeOfDay));
+    doses.sort((left, right) => left.timeOfDay.compareTo(right.timeOfDay));
     return doses;
   }
 
   Future<IntakeLogModel> logAdherence(IntakeLogCreateInput input) async {
-    try {
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/adherence/log',
-        data: input.toJson(),
-      );
-      return IntakeLogModel.fromJson(res.data!);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _logAdherenceInSupabase(input);
-    } catch (_) {
-      return await _logAdherenceInSupabase(input);
-    }
+    final response = await _client.rpc<Map<String, dynamic>>(
+      'record_intake_log',
+      params: {
+        'p_client_uuid': input.clientUuid,
+        'p_schedule_id': input.scheduleId,
+        'p_scheduled_time': input.scheduledTime.toUtc().toIso8601String(),
+        'p_actual_time': input.actualTime?.toUtc().toIso8601String(),
+        'p_status': input.status,
+        'p_reason': input.reason,
+        'p_logged_offline': input.loggedOffline,
+      },
+    );
+    return IntakeLogModel.fromJson(_asRow(response));
   }
 
-  // Convenience alias for logAdherence
   Future<IntakeLogModel> logDose(IntakeLogCreateInput input) =>
       logAdherence(input);
 
-  Future<IntakeLogModel> _logAdherenceInSupabase(
-    IntakeLogCreateInput input,
-  ) async {
-    // 1. Idempotency check by client_uuid
-    try {
-      final existing = await _client
-          .from('intake_logs')
-          .select()
-          .eq('client_uuid', input.clientUuid)
-          .maybeSingle();
-
-      if (existing != null) {
-        return IntakeLogModel.fromJson(Map<String, dynamic>.from(existing));
-      }
-    } catch (_) {
-      // Proceed to insert if idempotency lookup fails
-    }
-
-    // 2. Resolve patient_id and medication info
-    String? patientId = input.patientId;
-    String? medId;
-    double doseAmount = 1;
-    int? currentStock;
-
-    try {
-      final schedRes = await _client
-          .from('schedules')
-          .select(
-            'medication_id, dose_amount, medications(id, patient_id, stock_count)',
-          )
-          .eq('id', input.scheduleId)
-          .maybeSingle();
-
-      if (schedRes != null) {
-        final sMap = Map<String, dynamic>.from(schedRes);
-        doseAmount = (sMap['dose_amount'] as num?)?.toDouble() ?? 1.0;
-        final medData = sMap['medications'] != null
-            ? Map<String, dynamic>.from(sMap['medications'] as Map)
-            : null;
-        if (medData != null) {
-          patientId ??= medData['patient_id'] as String?;
-          medId = medData['id'] as String?;
-          currentStock = medData['stock_count'] as int?;
-        }
-      }
-    } catch (_) {}
-
-    patientId ??= _client.auth.currentUser?.id ?? '';
-
-    final actualTime = input.actualTime ??
-        (input.status == 'taken' ? DateTime.now().toUtc() : null);
-
-    final row = {
-      'client_uuid': input.clientUuid,
-      'schedule_id': input.scheduleId,
-      'patient_id': patientId,
-      'scheduled_time': input.scheduledTime.toUtc().toIso8601String(),
-      if (actualTime != null) 'actual_time': actualTime.toIso8601String(),
-      'status': input.status,
-      if (input.reason != null) 'reason': input.reason,
-      'logged_offline': input.loggedOffline,
-    };
-
-    final inserted = await _client
-        .from('intake_logs')
-        .insert(row)
-        .select()
-        .single();
-
-    // 3. Deduct stock if taken
-    if (input.status == 'taken' && medId != null && currentStock != null) {
-      try {
-        final newStock = (currentStock - doseAmount).round();
-        await _client
-            .from('medications')
-            .update({'stock_count': newStock < 0 ? 0 : newStock})
-            .eq('id', medId);
-      } catch (_) {}
-    }
-
-    return IntakeLogModel.fromJson(Map<String, dynamic>.from(inserted));
-  }
-
   Future<List<String>> syncBatch(List<Map<String, dynamic>> items) async {
-    try {
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/sync/batch',
-        data: {'items': items},
-      );
-      final rawIds =
-          res.data?['synced_client_uuids'] as List<dynamic>? ?? const [];
-      return rawIds.map((e) => e.toString()).toList();
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      return await _syncBatchInSupabase(items);
-    } catch (_) {
-      return await _syncBatchInSupabase(items);
-    }
-  }
-
-  Future<List<String>> _syncBatchInSupabase(
-    List<Map<String, dynamic>> items,
-  ) async {
     final synced = <String>[];
     for (final item in items) {
+      if (item['entity'] != 'intake_log') continue;
       final clientUuid = item['client_uuid']?.toString();
-      final entity = item['entity'] as String?;
-      final payload = item['payload'] as Map<String, dynamic>? ?? const {};
+      final rawPayload = item['payload'];
+      if (clientUuid == null || rawPayload is! Map) continue;
 
-      if (clientUuid == null) continue;
-
-      if (entity == 'intake_log') {
-        try {
-          await _logAdherenceInSupabase(
-            IntakeLogCreateInput(
-              clientUuid: clientUuid,
-              scheduleId: payload['schedule_id'].toString(),
-              scheduledTime: DateTime.parse(payload['scheduled_time'] as String),
-              actualTime: payload['actual_time'] != null
-                  ? DateTime.parse(payload['actual_time'] as String)
-                  : null,
-              status: payload['status'] as String? ?? 'taken',
-              reason: payload['reason'] as String?,
-              loggedOffline: true,
-            ),
-          );
-          synced.add(clientUuid);
-        } catch (_) {}
+      try {
+        final payload = Map<String, dynamic>.from(rawPayload);
+        final actualTime = payload['actual_time'];
+        await logAdherence(
+          IntakeLogCreateInput(
+            clientUuid: clientUuid,
+            scheduleId: payload['schedule_id'].toString(),
+            scheduledTime: DateTime.parse(payload['scheduled_time'] as String),
+            actualTime: actualTime == null
+                ? null
+                : DateTime.parse(actualTime as String),
+            status: payload['status'] as String? ?? 'taken',
+            reason: payload['reason'] as String?,
+            loggedOffline: true,
+          ),
+        );
+        synced.add(clientUuid);
+      } catch (_) {
+        // Keep failed items in the encrypted local queue for another attempt.
       }
     }
     return synced;
+  }
+
+  Map<String, dynamic> _asRow(dynamic value) {
+    if (value is Map) return Map<String, dynamic>.from(value);
+    if (value is List && value.isNotEmpty) {
+      return Map<String, dynamic>.from(value.first as Map);
+    }
+    throw StateError('Supabase returned no row.');
   }
 }
 
 final medicationRepositoryProvider = Provider<MedicationRepository>((ref) {
   return MedicationRepository(
-    apiClient: ref.watch(apiClientProvider),
     supabaseClient: ref.watch(supabaseClientProvider),
   );
 });

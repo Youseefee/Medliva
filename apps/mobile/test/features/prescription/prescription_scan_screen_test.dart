@@ -46,103 +46,117 @@ void main() {
   });
 
   testWidgets(
-      'PrescriptionScanScreen mocked scan -> edit -> confirm creates meds; cancel creates none',
-      (tester) async {
-    when(() => imagePicker.pickImage(any())).thenAnswer((_) async => fakeFile);
-    when(() => prescriptionRepository.scanPrescription(any())).thenAnswer(
-      (_) async => const PrescriptionScanResult(
-        medications: [
-          ExtractedDrugModel(
-            drugTradeName: 'Concor 5mg',
-            dosageMg: '5mg',
-            times: ['08:00'],
-          ),
-        ],
-      ),
-    );
-    when(() => medicationRepository.createMedication('patient-1', any()))
-        .thenAnswer(
-      (_) async => const MedicationModel(
-        id: 'med-rx-1',
-        patientId: 'patient-1',
-        name: 'Concor 5mg Plus',
-      ),
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentPatientIdProvider.overrideWithValue('patient-1'),
-          prescriptionImagePickerProvider.overrideWithValue(imagePicker),
-          prescriptionRepositoryProvider
-              .overrideWithValue(prescriptionRepository),
-          medicationRepositoryProvider.overrideWithValue(medicationRepository),
-        ],
-        child: const MaterialApp(
-          locale: Locale('ar'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: PrescriptionScanScreen(),
+    'PrescriptionScanScreen mocked scan -> edit -> confirm creates meds; cancel creates none',
+    (tester) async {
+      when(() => imagePicker.pickImage(any()))
+          .thenAnswer((_) async => fakeFile);
+      when(
+        () => prescriptionRepository.scanPrescription(
+          any(),
+          patientId: any(named: 'patientId'),
         ),
-      ),
-    );
+      ).thenAnswer(
+        (_) async => const PrescriptionScanResult(
+          medications: [
+            ExtractedDrugModel(
+              drugTradeName: 'Concor 5mg',
+              dosageMg: '5mg',
+              times: ['08:00'],
+            ),
+          ],
+        ),
+      );
+      when(() => medicationRepository.createMedication('patient-1', any()))
+          .thenAnswer(
+            (_) async => const MedicationModel(
+              id: 'med-rx-1',
+              patientId: 'patient-1',
+              name: 'Concor 5mg Plus',
+            ),
+          );
 
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentPatientIdProvider.overrideWithValue('patient-1'),
+            prescriptionImagePickerProvider.overrideWithValue(imagePicker),
+            prescriptionRepositoryProvider.overrideWithValue(
+              prescriptionRepository,
+            ),
+            medicationRepositoryProvider.overrideWithValue(
+              medicationRepository,
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ar'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PrescriptionScanScreen(),
+          ),
+        ),
+      );
 
-    // 1. Scan and cancel -> creates none
-    await tester.tap(find.byKey(const ValueKey('scan_camera_btn')));
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const ValueKey('scan_name_field_0')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('scan_cancel_btn')));
-    await tester.pumpAndSettle();
+      // 1. Scan and cancel -> creates none
+      await tester.tap(find.byKey(const ValueKey('scan_camera_btn')));
+      await tester.pumpAndSettle();
 
-    verifyNever(() => medicationRepository.createMedication(any(), any()));
+      expect(find.byKey(const ValueKey('scan_name_field_0')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('scan_cancel_btn')));
+      await tester.pumpAndSettle();
 
-    // 2. Scan -> edit name -> confirm -> creates medication
-    await tester.tap(find.byKey(const ValueKey('scan_camera_btn')));
-    await tester.pumpAndSettle();
+      verifyNever(() => medicationRepository.createMedication(any(), any()));
 
-    await tester.enterText(
-      find.byKey(const ValueKey('scan_name_field_0')),
-      'Concor 5mg Plus',
-    );
-    await tester.tap(find.byKey(const ValueKey('scan_confirm_btn')));
-    await tester.pumpAndSettle();
+      // 2. Scan -> edit name -> confirm -> creates medication
+      await tester.tap(find.byKey(const ValueKey('scan_camera_btn')));
+      await tester.pumpAndSettle();
 
-    verify(() => medicationRepository.createMedication('patient-1', any()))
-        .called(1);
-  });
+      await tester.enterText(
+        find.byKey(const ValueKey('scan_name_field_0')),
+        'Concor 5mg Plus',
+      );
+      await tester.tap(find.byKey(const ValueKey('scan_confirm_btn')));
+      await tester.pumpAndSettle();
+
+      verify(() => medicationRepository.createMedication('patient-1', any()))
+          .called(1);
+    },
+  );
 
   testWidgets(
-      'PrescriptionScanScreen shows SnackBar when image picking or scanning fails',
-      (tester) async {
-    when(() => imagePicker.pickImage(any()))
-        .thenThrow(Exception('Camera permission denied'));
+    'PrescriptionScanScreen shows SnackBar when image picking or scanning fails',
+    (tester) async {
+      when(() => imagePicker.pickImage(any()))
+          .thenThrow(Exception('Camera permission denied'));
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentPatientIdProvider.overrideWithValue('patient-1'),
-          prescriptionImagePickerProvider.overrideWithValue(imagePicker),
-          prescriptionRepositoryProvider
-              .overrideWithValue(prescriptionRepository),
-          medicationRepositoryProvider.overrideWithValue(medicationRepository),
-        ],
-        child: const MaterialApp(
-          locale: Locale('ar'),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: PrescriptionScanScreen(),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentPatientIdProvider.overrideWithValue('patient-1'),
+            prescriptionImagePickerProvider.overrideWithValue(imagePicker),
+            prescriptionRepositoryProvider.overrideWithValue(
+              prescriptionRepository,
+            ),
+            medicationRepositoryProvider.overrideWithValue(
+              medicationRepository,
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('ar'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PrescriptionScanScreen(),
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('scan_camera_btn')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('scan_camera_btn')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Exception: Camera permission denied'), findsOneWidget);
-  });
+      expect(find.text('Exception: Camera permission denied'), findsOneWidget);
+    },
+  );
 }

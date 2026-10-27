@@ -3,12 +3,6 @@
 build/
 .flutter-plugins*
 *.iml
-# Python
-__pycache__/
-.venv/
-*.pyc
-.pytest_cache/
-.ruff_cache/
 # Node
 node_modules/
 .next/

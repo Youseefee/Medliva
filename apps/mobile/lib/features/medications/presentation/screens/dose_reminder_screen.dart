@@ -6,10 +6,7 @@ import 'package:medliva/features/medications/presentation/screens/today_screen.d
 import 'package:medliva/l10n/app_localizations.dart';
 
 class DoseReminderScreen extends ConsumerWidget {
-  const DoseReminderScreen({
-    this.dose,
-    super.key,
-  });
+  const DoseReminderScreen({this.dose, super.key});
 
   final TodayDoseModel? dose;
 
@@ -17,22 +14,69 @@ class DoseReminderScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final doses = ref.watch(todayDosesNotifierProvider).value ?? const [];
-    final activeDose =
-        dose ??
-        doses.where((d) => d.status == 'pending').firstOrNull ??
-        (doses.isNotEmpty ? doses.first : null);
+    final dosesAsync = ref.watch(todayDosesNotifierProvider);
+    final doses = dosesAsync.value ?? const [];
+    final activeDose = dose?.isActionable == true
+        ? dose
+        : doses.where((d) => d.isActionable).firstOrNull;
 
-    final medName =
-        activeDose?.medicationName ?? l10n.defaultSampleMedication;
-    final timeStr = activeDose?.timeOfDay ?? l10n.defaultSampleTime;
+    if (activeDose == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: SafeArea(
+          child: dosesAsync.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : dosesAsync.hasError
+              ? Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(l10n.errorOccurred),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () =>
+                            ref.invalidate(todayDosesNotifierProvider),
+                        child: Text(l10n.retry),
+                      ),
+                    ],
+                  ),
+                )
+              : Center(
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.event_available_rounded,
+                          size: 64,
+                          color: Color(0xFF00796B),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          l10n.noPendingDose,
+                          style: theme.textTheme.headlineSmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        OutlinedButton(
+                          onPressed: () => context.push('/medications'),
+                          child: Text(l10n.manageMedicationsLink),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+        ),
+      );
+    }
+
+    final medName = activeDose.medicationName;
+    final timeStr = activeDose.timeOfDay;
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsetsDirectional.symmetric(
@@ -134,11 +178,9 @@ class DoseReminderScreen extends ConsumerWidget {
                     ),
                   ),
                   onPressed: () async {
-                    if (activeDose != null) {
-                      await ref
-                          .read(todayDosesNotifierProvider.notifier)
-                          .logDose(dose: activeDose, status: 'taken');
-                    }
+                    await ref
+                        .read(todayDosesNotifierProvider.notifier)
+                        .logDose(dose: activeDose, status: 'taken');
                     if (context.mounted) {
                       if (Navigator.of(context).canPop()) {
                         Navigator.of(context).pop();
@@ -170,11 +212,9 @@ class DoseReminderScreen extends ConsumerWidget {
                     ),
                   ),
                   onPressed: () async {
-                    if (activeDose != null) {
-                      await ref
-                          .read(todayDosesNotifierProvider.notifier)
-                          .logDose(dose: activeDose, status: 'snoozed');
-                    }
+                    await ref
+                        .read(todayDosesNotifierProvider.notifier)
+                        .logDose(dose: activeDose, status: 'snoozed');
                     if (context.mounted) {
                       if (Navigator.of(context).canPop()) {
                         Navigator.of(context).pop();

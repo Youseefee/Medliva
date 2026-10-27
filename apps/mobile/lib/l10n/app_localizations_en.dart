@@ -298,12 +298,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get triageCritical => 'Critical';
 
   @override
-  String get voiceVitalButton => 'Voice Entry';
-
-  @override
-  String get voiceVitalConfirmTitle => 'Confirm Voice Reading';
-
-  @override
   String get confirmSaveButton => 'Confirm & Save';
 
   @override
@@ -410,9 +404,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navInventoryComm => 'Inventory & Care';
 
   @override
-  String get navVoiceVitals => 'Voice Vitals';
-
-  @override
   String get navSos => 'SOS';
 
   @override
@@ -431,7 +422,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get todayMedicationCardTitle => 'Today\'s Medication';
 
   @override
-  String get weeklyAdherenceTitle => 'Weekly Medication Adherence';
+  String get weeklyAdherenceTitle => 'Today\'s Medication Adherence';
 
   @override
   String weeklyAdherenceSub(int taken, int total) {
@@ -440,6 +431,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weeklyAdherenceKeepUp => 'Great job, keep it up';
+
+  @override
+  String get noPendingDose => 'No dose is pending right now';
 
   @override
   String get timeForMedicationTitle => 'Time for Medication';
@@ -478,7 +472,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitMgDl => 'mg/dL';
 
   @override
-  String get lastReadingToday => 'Last reading: Today';
+  String lastReadingAt(String time) {
+    return 'Last reading: $time';
+  }
 
   @override
   String get escalationReminder15m => '+15 min: Reminder sent';
@@ -562,15 +558,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get downloadPdfButton => 'Download PDF';
-
-  @override
-  String get voiceVitalTitle => 'Voice Vitals';
-
-  @override
-  String get voiceVitalSubtitle => 'Speak to log your vital signs easily';
-
-  @override
-  String get pressAndSpeak => 'Press & Speak';
 
   @override
   String get vitalLoggedSuccess => 'Reading Logged';
@@ -822,11 +809,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get defaultSampleTime => '8:00 AM';
+  String get prescriptionPatientRequired =>
+      'Select a patient before scanning a prescription.';
 
   @override
-  String get defaultSampleVitalTime => '7:30 AM';
+  String get pillImageTitle => 'Medication photo';
 
   @override
-  String get defaultSampleMedication => 'Amlodipine 5mg';
+  String get pillImageEmpty => 'No medication photo added yet';
+
+  @override
+  String get pillImageUnavailable => 'Medication photo is unavailable';
+
+  @override
+  String get pillImageUploadButton => 'Add or change photo';
+
+  @override
+  String get pillImageUploadSuccess => 'Medication photo saved securely';
+
+  @override
+  String get pillImageUploadFailed => 'Could not save the medication photo';
 }

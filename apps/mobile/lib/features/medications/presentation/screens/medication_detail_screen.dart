@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:medliva/features/medications/data/medication_repository.dart';
 import 'package:medliva/features/medications/domain/models/medication.dart';
 import 'package:medliva/features/medications/presentation/screens/medication_list_screen.dart';
+import 'package:medliva/features/storage/data/supabase_image_repository.dart';
 import 'package:medliva/l10n/app_localizations.dart';
 
 class MedicationDetailScreen extends ConsumerStatefulWidget {
-  const MedicationDetailScreen({
-    required this.medication,
-    super.key,
-  });
+  const MedicationDetailScreen({required this.medication, super.key});
 
   final MedicationModel medication;
 
@@ -26,6 +25,7 @@ class _MedicationDetailScreenState
   int _selectedDaysMask = 127;
   String _mealRelation = 'after_meal';
   bool _isAdding = false;
+  bool _isUploadingPillImage = false;
 
   @override
   void initState() {
@@ -85,10 +85,52 @@ class _MedicationDetailScreenState
     }
   }
 
+  Future<void> _uploadPillImage() async {
+    final l10n = AppLocalizations.of(context)!;
+    setState(() => _isUploadingPillImage = true);
+    try {
+      final file = await ref
+          .read(mediaImagePickerProvider)
+          .pickImage(ImageSource.gallery);
+      if (file == null) return;
+
+      final key = (
+        patientId: widget.medication.patientId,
+        medicationId: widget.medication.id,
+      );
+      await ref
+          .read(supabaseImageRepositoryProvider)
+          .uploadPillImage(
+            patientId: key.patientId,
+            medicationId: key.medicationId,
+            file: file,
+          );
+      ref.invalidate(pillImageSignedUrlProvider(key));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.pillImageUploadSuccess)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${l10n.pillImageUploadFailed}: $error'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploadingPillImage = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final pillImageKey = (
+      patientId: widget.medication.patientId,
+      medicationId: widget.medication.id,
+    );
+    final pillImage = ref.watch(pillImageSignedUrlProvider(pillImageKey));
     final dayLabels = <MapEntry<int, String>>[
       MapEntry(1, l10n.daySat),
       MapEntry(2, l10n.daySun),
@@ -119,6 +161,70 @@ class _MedicationDetailScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Card(
+                key: const ValueKey('pill_image_card'),
+                clipBehavior: Clip.antiAlias,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        l10n.pillImageTitle,
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          height: 180,
+                          child: pillImage.when(
+                            data: (url) => url == null
+                                ? _PillImagePlaceholder(
+                                    label: l10n.pillImageEmpty,
+                                  )
+                                : Image.network(
+                                    url,
+                                    key: const ValueKey('pill_image_preview'),
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, _, _) =>
+                                        _PillImagePlaceholder(
+                                          label: l10n.pillImageUnavailable,
+                                        ),
+                                  ),
+                            loading: () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            error: (_, _) => _PillImagePlaceholder(
+                              label: l10n.pillImageUnavailable,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          key: const ValueKey('pill_image_upload_btn'),
+                          onPressed: _isUploadingPillImage
+                              ? null
+                              : _uploadPillImage,
+                          icon: _isUploadingPillImage
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.add_a_photo_rounded),
+                          label: Text(l10n.pillImageUploadButton),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
               Text(
                 l10n.schedulesSectionTitle,
                 style: theme.textTheme.titleLarge,
@@ -204,8 +310,8 @@ class _MedicationDetailScreenState
                                   style: OutlinedButton.styleFrom(
                                     backgroundColor:
                                         _mealRelation == 'after_meal'
-                                            ? theme.colorScheme.primaryContainer
-                                            : null,
+                                        ? theme.colorScheme.primaryContainer
+                                        : null,
                                   ),
                                   onPressed: () => setState(
                                     () => _mealRelation = 'after_meal',
@@ -233,8 +339,8 @@ class _MedicationDetailScreenState
                                   style: OutlinedButton.styleFrom(
                                     backgroundColor:
                                         _mealRelation == 'before_meal'
-                                            ? theme.colorScheme.primaryContainer
-                                            : null,
+                                        ? theme.colorScheme.primaryContainer
+                                        : null,
                                   ),
                                   onPressed: () => setState(
                                     () => _mealRelation = 'before_meal',
@@ -268,6 +374,29 @@ class _MedicationDetailScreenState
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PillImagePlaceholder extends StatelessWidget {
+  const _PillImagePlaceholder({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.medication_rounded, size: 44),
+            const SizedBox(height: 8),
+            Text(label, textAlign: TextAlign.center),
+          ],
         ),
       ),
     );

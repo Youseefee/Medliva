@@ -1,133 +1,143 @@
 import 'dart:async';
-import 'package:dio/dio.dart';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/medications/data/medication_repository.dart';
 import 'package:medliva/features/medications/domain/models/medication.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class MockApiClient extends Mock implements ApiClient;
-
-class MockDio extends Mock implements Dio;
-
 class MockSupabaseClient extends Mock implements SupabaseClient;
 
-class FakeTransformBuilder<T> extends Fake implements PostgrestTransformBuilder<T> {
+class FakeTransformBuilder<T> extends Fake
+    implements PostgrestTransformBuilder<T> {
   FakeTransformBuilder(this._data);
+
   final dynamic _data;
 
   @override
   PostgrestTransformBuilder<Map<String, dynamic>> single() =>
-      FakeTransformBuilder<Map<String, dynamic>>(
-        _data is List
-            ? _data.first as Map<String, dynamic>
-            : _data as Map<String, dynamic>,
-      );
+      FakeTransformBuilder<Map<String, dynamic>>(_oneRow(_data));
 
   @override
   PostgrestTransformBuilder<Map<String, dynamic>?> maybeSingle() =>
-      FakeTransformBuilder<Map<String, dynamic>?>(
-        _data is List
-            ? (_data.isEmpty ? null : _data.first as Map<String, dynamic>)
-            : _data as Map<String, dynamic>?,
-      );
+      FakeTransformBuilder<Map<String, dynamic>?>(_optionalOneRow(_data));
 
   @override
-  Future<R> then<R>(FutureOr<R> Function(T value) onValue,
-      {Function? onError}) {
+  Future<R> then<R>(
+    FutureOr<R> Function(T value) onValue, {
+    Function? onError,
+  }) {
     return Future.value(_data as T).then(onValue, onError: onError);
   }
 }
 
 class FakeFilterBuilder<T> extends Fake implements PostgrestFilterBuilder<T> {
   FakeFilterBuilder(this._data);
-  final dynamic _data;
 
-  @override
-  PostgrestTransformBuilder<List<Map<String, dynamic>>> select([String columns = '*']) =>
-      FakeTransformBuilder<List<Map<String, dynamic>>>(
-        _data is List
-            ? List<Map<String, dynamic>>.from(_data)
-            : [_data as Map<String, dynamic>],
-      );
+  final dynamic _data;
 
   @override
   PostgrestFilterBuilder<T> eq(String column, Object value) => this;
 
   @override
-  PostgrestTransformBuilder<T> order(String column,
-          {bool ascending = false,
-          bool nullsFirst = false,
-          String? referencedTable}) =>
-      this;
-
-  @override
   PostgrestFilterBuilder<T> gte(String column, Object value) => this;
 
   @override
-  PostgrestFilterBuilder<T> lte(String column, Object value) => this;
+  PostgrestFilterBuilder<T> lt(String column, Object value) => this;
+
+  @override
+  PostgrestTransformBuilder<T> order(
+    String column, {
+    bool ascending = false,
+    bool nullsFirst = false,
+    String? referencedTable,
+  }) => this;
+
+  @override
+  PostgrestTransformBuilder<List<Map<String, dynamic>>> select([
+    String columns = '*',
+  ]) => FakeTransformBuilder<List<Map<String, dynamic>>>(_rows(_data));
 
   @override
   PostgrestTransformBuilder<Map<String, dynamic>> single() =>
-      FakeTransformBuilder<Map<String, dynamic>>(
-        _data is List
-            ? _data.first as Map<String, dynamic>
-            : _data as Map<String, dynamic>,
-      );
+      FakeTransformBuilder<Map<String, dynamic>>(_oneRow(_data));
 
   @override
   PostgrestTransformBuilder<Map<String, dynamic>?> maybeSingle() =>
-      FakeTransformBuilder<Map<String, dynamic>?>(
-        _data is List
-            ? (_data.isEmpty ? null : _data.first as Map<String, dynamic>)
-            : _data as Map<String, dynamic>?,
-      );
+      FakeTransformBuilder<Map<String, dynamic>?>(_optionalOneRow(_data));
 
   @override
-  Future<R> then<R>(FutureOr<R> Function(T value) onValue,
-      {Function? onError}) {
+  Future<R> then<R>(
+    FutureOr<R> Function(T value) onValue, {
+    Function? onError,
+  }) {
     return Future.value(_data as T).then(onValue, onError: onError);
   }
 }
 
 class FakeQueryBuilder extends Fake implements SupabaseQueryBuilder {
   FakeQueryBuilder(this._data);
+
   final dynamic _data;
 
   @override
-  PostgrestFilterBuilder<List<Map<String, dynamic>>> select([String columns = '*']) =>
-      FakeFilterBuilder<List<Map<String, dynamic>>>(_data);
+  PostgrestFilterBuilder<List<Map<String, dynamic>>> select([
+    String columns = '*',
+  ]) => FakeFilterBuilder<List<Map<String, dynamic>>>(_rows(_data));
 
   @override
-  PostgrestFilterBuilder<dynamic> insert(Object values, {bool defaultToNull = true}) =>
-      FakeFilterBuilder<dynamic>(_data);
+  PostgrestFilterBuilder<dynamic> insert(
+    Object values, {
+    bool defaultToNull = true,
+  }) => FakeFilterBuilder<dynamic>(_data);
 
   @override
-  // Match PostgrestQueryBuilder.update signature which uses raw Map parameter.
-  // ignore: strict_raw_type
-  PostgrestFilterBuilder<dynamic> update(Map values, {bool defaultToNull = true}) =>
-      FakeFilterBuilder<dynamic>(_data);
+  PostgrestFilterBuilder<dynamic> update(
+    Map<dynamic, dynamic> values, {
+    bool defaultToNull = true,
+  }) => FakeFilterBuilder<dynamic>(_data);
+}
+
+class FakeRpcBuilder<T> extends Fake implements PostgrestFilterBuilder<T> {
+  FakeRpcBuilder(this._data);
+
+  final dynamic _data;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(T value) onValue, {
+    Function? onError,
+  }) {
+    return Future.value(_data as T).then(onValue, onError: onError);
+  }
+}
+
+List<Map<String, dynamic>> _rows(dynamic value) {
+  if (value == null) return [];
+  if (value is List) {
+    return value.map((row) => Map<String, dynamic>.from(row as Map)).toList();
+  }
+  return [Map<String, dynamic>.from(value as Map)];
+}
+
+Map<String, dynamic> _oneRow(dynamic value) {
+  if (value is List) return Map<String, dynamic>.from(value.first as Map);
+  return Map<String, dynamic>.from(value as Map);
+}
+
+Map<String, dynamic>? _optionalOneRow(dynamic value) {
+  if (value == null) return null;
+  if (value is List) {
+    return value.isEmpty ? null : Map<String, dynamic>.from(value.first as Map);
+  }
+  return Map<String, dynamic>.from(value as Map);
 }
 
 void main() {
-  late MockApiClient apiClient;
-  late MockDio dio;
-  late MockSupabaseClient mockSupabase;
+  late MockSupabaseClient supabase;
   late MedicationRepository repository;
 
-  setUp(() {
-    apiClient = MockApiClient();
-    dio = MockDio();
-    mockSupabase = MockSupabaseClient();
-    when(() => apiClient.dio).thenReturn(dio);
-    repository = MedicationRepository(
-      apiClient: apiClient,
-      supabaseClient: mockSupabase,
-    );
-  });
-
-  final sampleMedicationJson = <String, dynamic>{
+  final medicationRow = <String, dynamic>{
     'id': 'med-1',
     'patient_id': 'patient-1',
     'name': 'Concor',
@@ -143,159 +153,144 @@ void main() {
       {
         'id': 'sched-1',
         'medication_id': 'med-1',
-        'time_of_day': '08:00',
+        'time_of_day': '08:00:00',
         'dose_amount': 1.0,
         'meal_relation': 'after_meal',
         'days_mask': 127,
         'instructions_ar': 'بعد الفطار',
         'is_active': true,
       },
+      {
+        'id': 'sched-inactive',
+        'medication_id': 'med-1',
+        'time_of_day': '20:00:00',
+        'dose_amount': 1.0,
+        'meal_relation': 'before_meal',
+        'days_mask': 127,
+        'is_active': false,
+      },
     ],
   };
 
-  group('MedicationRepository API Operations', () {
-    test('listMedications calls GET /patients/{id}/medications', () async {
-      when(
-        () => dio.get<List<dynamic>>('/patients/patient-1/medications'),
-      ).thenAnswer(
-        (_) async => Response<List<dynamic>>(
-          requestOptions:
-              RequestOptions(path: '/patients/patient-1/medications'),
-          statusCode: 200,
-          data: [sampleMedicationJson],
-        ),
-      );
+  setUp(() {
+    supabase = MockSupabaseClient();
+    repository = MedicationRepository(supabaseClient: supabase);
+  });
 
-      final result = await repository.listMedications('patient-1');
-      expect(result, hasLength(1));
-      expect(result.first.id, 'med-1');
-      expect(result.first.name, 'Concor');
-      expect(result.first.schedules, hasLength(1));
-      expect(result.first.schedules.first.timeOfDay, '08:00');
+  group('MedicationRepository Supabase operations', () {
+    test('listMedications reads active medications and schedules', () async {
+      when(() => supabase.from('medications'))
+          .thenAnswer((_) => FakeQueryBuilder([medicationRow]));
+
+      final medications = await repository.listMedications('patient-1');
+
+      expect(medications, hasLength(1));
+      expect(medications.first.id, 'med-1');
+      expect(medications.first.schedules, hasLength(1));
+      expect(medications.first.schedules.first.timeOfDay, '08:00');
+      verify(() => supabase.from('medications')).called(1);
     });
 
-    test('createMedication calls POST /patients/{id}/medications', () async {
+    test('createMedication uses one transaction-safe database RPC', () async {
+      Map<String, dynamic>? rpcParams;
       when(
-        () => dio.post<Map<String, dynamic>>(
-          '/patients/patient-1/medications',
-          data: any(named: 'data'),
+        () => supabase.rpc<Map<String, dynamic>>(
+          'create_medication_with_schedules',
+          params: any(named: 'params'),
         ),
-      ).thenAnswer(
-        (_) async => Response<Map<String, dynamic>>(
-          requestOptions:
-              RequestOptions(path: '/patients/patient-1/medications'),
-          statusCode: 201,
-          data: sampleMedicationJson,
-        ),
-      );
+      ).thenAnswer((invocation) {
+        rpcParams = Map<String, dynamic>.from(
+          invocation.namedArguments[#params] as Map,
+        );
+        return FakeRpcBuilder<Map<String, dynamic>>(medicationRow);
+      });
 
-      final created = await repository.createMedication(
+      final medication = await repository.createMedication(
         'patient-1',
         const MedicationCreateInput(
           name: 'Concor',
-          strength: '5mg',
+          tradeName: 'Concor 5mg',
           stockCount: 30,
           schedules: [ScheduleCreateInput(timeOfDay: '08:00')],
         ),
       );
 
-      expect(created.id, 'med-1');
-      expect(created.stockCount, 30);
+      expect(medication.id, 'med-1');
+      expect(rpcParams?['p_patient_id'], 'patient-1');
+      expect((rpcParams?['p_medication'] as Map)['name'], 'Concor');
+      expect(rpcParams?['p_schedules'], [
+        {
+          'time_of_day': '08:00',
+          'dose_amount': 1.0,
+          'meal_relation': 'after_meal',
+          'days_mask': 127,
+        },
+      ]);
     });
 
-    test('updateMedication calls PATCH /medications/{id}', () async {
-      when(
-        () => dio.patch<Map<String, dynamic>>(
-          '/medications/med-1',
-          data: any(named: 'data'),
-        ),
-      ).thenAnswer(
-        (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: '/medications/med-1'),
-          statusCode: 200,
-          data: {
-            ...sampleMedicationJson,
-            'name': 'Concor Updated',
-            'stock_count': 20,
-          },
-        ),
+    test('updateMedication changes only supplied fields in Supabase', () async {
+      when(() => supabase.from('medications')).thenAnswer(
+        (_) => FakeQueryBuilder({
+          ...medicationRow,
+          'name': 'Concor Updated',
+          'stock_count': 20,
+        }),
       );
 
-      final updated = await repository.updateMedication(
+      final medication = await repository.updateMedication(
         'med-1',
         const MedicationUpdateInput(name: 'Concor Updated', stockCount: 20),
       );
 
-      expect(updated.name, 'Concor Updated');
-      expect(updated.stockCount, 20);
+      expect(medication.name, 'Concor Updated');
+      expect(medication.stockCount, 20);
     });
 
-    test('deleteMedication calls DELETE /medications/{id}', () async {
-      when(
-        () => dio.delete<Map<String, dynamic>>('/medications/med-1'),
-      ).thenAnswer(
-        (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: '/medications/med-1'),
-          statusCode: 200,
-          data: {'status': 'success'},
-        ),
-      );
+    test('deleteMedication deactivates the row in Supabase', () async {
+      when(() => supabase.from('medications'))
+          .thenAnswer((_) => FakeQueryBuilder({'id': 'med-1'}));
 
       await repository.deleteMedication('med-1');
-      verify(
-        () => dio.delete<Map<String, dynamic>>('/medications/med-1'),
-      ).called(1);
+
+      verify(() => supabase.from('medications')).called(1);
     });
 
-    test('listSchedules calls GET /medications/{id}/schedules', () async {
-      when(
-        () => dio.get<List<dynamic>>('/medications/med-1/schedules'),
-      ).thenAnswer(
-        (_) async => Response<List<dynamic>>(
-          requestOptions: RequestOptions(path: '/medications/med-1/schedules'),
-          statusCode: 200,
-          data: [
+    test(
+      'listSchedules includes the medication schedules from Supabase',
+      () async {
+        when(() => supabase.from('schedules')).thenAnswer(
+          (_) => FakeQueryBuilder([
             {
               'id': 'sched-1',
               'medication_id': 'med-1',
-              'time_of_day': '08:00',
+              'time_of_day': '08:00:00',
               'dose_amount': 1.0,
               'meal_relation': 'after_meal',
               'days_mask': 127,
-              'instructions_ar': 'بعد الفطار',
               'is_active': true,
             },
-          ],
-        ),
-      );
+          ]),
+        );
 
-      final schedules = await repository.listSchedules('med-1');
-      expect(schedules, hasLength(1));
-      expect(schedules.first.id, 'sched-1');
-      expect(schedules.first.timeOfDay, '08:00');
-    });
+        final schedules = await repository.listSchedules('med-1');
 
-    test('createSchedule calls POST /medications/{id}/schedules', () async {
-      when(
-        () => dio.post<Map<String, dynamic>>(
-          '/medications/med-1/schedules',
-          data: any(named: 'data'),
-        ),
-      ).thenAnswer(
-        (_) async => Response<Map<String, dynamic>>(
-          requestOptions: RequestOptions(path: '/medications/med-1/schedules'),
-          statusCode: 201,
-          data: {
-            'id': 'sched-2',
-            'medication_id': 'med-1',
-            'time_of_day': '20:00',
-            'dose_amount': 1.0,
-            'meal_relation': 'before_meal',
-            'days_mask': 127,
-            'instructions_ar': null,
-            'is_active': true,
-          },
-        ),
+        expect(schedules, hasLength(1));
+        expect(schedules.first.id, 'sched-1');
+        expect(schedules.first.timeOfDay, '08:00');
+      },
+    );
+
+    test('createSchedule inserts a schedule through PostgREST', () async {
+      when(() => supabase.from('schedules')).thenAnswer(
+        (_) => FakeQueryBuilder({
+          'id': 'sched-2',
+          'medication_id': 'med-1',
+          'time_of_day': '20:00:00',
+          'dose_amount': 1.0,
+          'meal_relation': 'before_meal',
+          'days_mask': 127,
+          'is_active': true,
+        }),
       );
 
       final schedule = await repository.createSchedule(
@@ -305,229 +300,134 @@ void main() {
           mealRelation: 'before_meal',
         ),
       );
+
       expect(schedule.id, 'sched-2');
       expect(schedule.timeOfDay, '20:00');
       expect(schedule.mealRelation, 'before_meal');
     });
 
-    test('getTodayDoses calls GET /patients/{id}/today', () async {
-      when(
-        () => dio.get<List<dynamic>>('/patients/patient-1/today'),
-      ).thenAnswer(
-        (_) async => Response<List<dynamic>>(
-          requestOptions: RequestOptions(path: '/patients/patient-1/today'),
-          statusCode: 200,
-          data: [
+    test(
+      'getTodayDoses joins active schedules with their intake logs',
+      () async {
+        when(() => supabase.from('medications')).thenAnswer(
+          (_) => FakeQueryBuilder([
             {
-              'schedule_id': 'sched-1',
-              'medication_id': 'med-1',
-              'medication_name': 'Concor',
-              'time_of_day': '08:00',
-              'dose_amount': 1.0,
-              'meal_relation': 'after_meal',
-              'instructions_ar': 'بعد الفطار',
-              'status': 'pending',
-              'intake_log_id': null,
-              'actual_time': null,
+              'id': 'med-1',
+              'name': 'Concor',
+              'schedules': [
+                (medicationRow['schedules'] as List<dynamic>).first,
+              ],
             },
-          ],
-        ),
-      );
-
-      final today = await repository.getTodayDoses('patient-1');
-      expect(today, hasLength(1));
-      expect(today.first.scheduleId, 'sched-1');
-      expect(today.first.medicationName, 'Concor');
-      expect(today.first.status, 'pending');
-    });
-  });
-
-  group('MedicationRepository Supabase Fallback', () {
-    test('listMedications falls back to Supabase on DioException', () async {
-      when(() => dio.get<List<dynamic>>(any())).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/patients/p-1/medications'),
-          type: DioExceptionType.connectionTimeout,
-        ),
-      );
-
-      final fakeData = [
-        {
-          'id': 'med-123',
-          'patient_id': 'p-1',
-          'name': 'Aspirin',
-          'is_active': true,
-          'schedules': [
+          ]),
+        );
+        when(() => supabase.from('intake_logs')).thenAnswer(
+          (_) => FakeQueryBuilder([
             {
-              'id': 'sched-1',
-              'medication_id': 'med-123',
-              'time_of_day': '08:00:00',
-              'dose_amount': 1.0,
-              'meal_relation': 'after_meal',
-              'days_mask': 127,
-              'is_active': true,
-            }
-          ]
-        }
-      ];
+              'id': 'log-1',
+              'schedule_id': 'sched-1',
+              'status': 'taken',
+              'actual_time': '2026-10-27T08:05:00Z',
+            },
+          ]),
+        );
 
-      when(() => mockSupabase.from('medications'))
-          .thenAnswer((_) => FakeQueryBuilder(fakeData));
+        final doses = await repository.getTodayDoses('patient-1');
 
-      final res = await repository.listMedications('p-1');
-      expect(res, hasLength(1));
-      expect(res.first.id, 'med-123');
-      expect(res.first.name, 'Aspirin');
-      expect(res.first.schedules.first.timeOfDay, '08:00');
-    });
+        expect(doses, hasLength(1));
+        expect(doses.first.scheduleId, 'sched-1');
+        expect(doses.first.medicationName, 'Concor');
+        expect(doses.first.status, 'taken');
+        expect(doses.first.intakeLogId, 'log-1');
+      },
+    );
 
-    test('createMedication falls back to Supabase on DioException', () async {
-      when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-          .thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/patients/p-1/medications'),
-          type: DioExceptionType.connectionError,
+    test('logAdherence uses an atomic idempotent database function', () async {
+      Map<String, dynamic>? rpcParams;
+      when(
+        () => supabase.rpc<Map<String, dynamic>>(
+          'record_intake_log',
+          params: any(named: 'params'),
         ),
-      );
-
-      final medData = {
-        'id': 'med-new',
-        'patient_id': 'p-1',
-        'name': 'Metformin',
-        'form': 'قرص',
-        'stock_count': 60,
-        'alert_threshold_days': 5,
-        'is_active': true,
-      };
-
-      final schedData = {
-        'id': 'sched-new',
-        'medication_id': 'med-new',
-        'time_of_day': '09:00:00',
-        'dose_amount': 1.0,
-        'meal_relation': 'after_meal',
-        'days_mask': 127,
-        'is_active': true,
-      };
-
-      when(() => mockSupabase.from('medications'))
-          .thenAnswer((_) => FakeQueryBuilder(medData));
-      when(() => mockSupabase.from('schedules'))
-          .thenAnswer((_) => FakeQueryBuilder(schedData));
-
-      final created = await repository.createMedication(
-        'p-1',
-        const MedicationCreateInput(
-          name: 'Metformin',
-          stockCount: 60,
-          schedules: [
-            ScheduleCreateInput(timeOfDay: '09:00'),
-          ],
-        ),
-      );
-
-      expect(created.id, 'med-new');
-      expect(created.name, 'Metformin');
-      expect(created.schedules, hasLength(1));
-      expect(created.schedules.first.id, 'sched-new');
-      expect(created.schedules.first.timeOfDay, '09:00');
-    });
-
-    test('getTodayDoses falls back to Supabase on DioException', () async {
-      when(() => dio.get<List<dynamic>>(any())).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/patients/p-1/today'),
-          type: DioExceptionType.connectionTimeout,
-        ),
-      );
-
-      final medsData = [
-        {
-          'id': 'med-10',
-          'name': 'Concor',
-          'is_active': true,
-          'schedules': [
-            {
-              'id': 'sched-10',
-              'medication_id': 'med-10',
-              'time_of_day': '08:00',
-              'dose_amount': 1.0,
-              'meal_relation': 'after_meal',
-              'is_active': true,
-            }
-          ]
-        }
-      ];
-
-      final logsData = [
-        {
-          'id': 'log-10',
-          'schedule_id': 'sched-10',
+      ).thenAnswer((invocation) {
+        rpcParams = Map<String, dynamic>.from(
+          invocation.namedArguments[#params] as Map,
+        );
+        return FakeRpcBuilder<Map<String, dynamic>>({
+          'id': 'log-1',
+          'client_uuid': 'uuid-1',
+          'schedule_id': 'sched-1',
+          'patient_id': 'patient-1',
+          'scheduled_time': '2026-10-27T08:00:00Z',
+          'actual_time': '2026-10-27T08:00:00Z',
           'status': 'taken',
-          'actual_time': '2026-10-25T08:05:00Z',
-        }
-      ];
+          'logged_offline': false,
+        });
+      });
 
-      when(() => mockSupabase.from('medications'))
-          .thenAnswer((_) => FakeQueryBuilder(medsData));
-      when(() => mockSupabase.from('intake_logs'))
-          .thenAnswer((_) => FakeQueryBuilder(logsData));
-
-      final doses = await repository.getTodayDoses('p-1');
-      expect(doses, hasLength(1));
-      expect(doses.first.medicationName, 'Concor');
-      expect(doses.first.status, 'taken');
-      expect(doses.first.intakeLogId, 'log-10');
-    });
-
-    test('logAdherence falls back to Supabase on DioException', () async {
-      when(() => dio.post<Map<String, dynamic>>(any(), data: any(named: 'data')))
-          .thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/adherence/log'),
-          type: DioExceptionType.connectionError,
-        ),
-      );
-
-      final logData = {
-        'id': 'log-new',
-        'client_uuid': 'uuid-1',
-        'schedule_id': 'sched-10',
-        'patient_id': 'p-1',
-        'scheduled_time': '2026-10-25T08:00:00Z',
-        'status': 'taken',
-        'logged_offline': false,
-      };
-
-      final schedData = {
-        'id': 'sched-10',
-        'medication_id': 'med-1',
-        'dose_amount': 1.0,
-        'medications': {
-          'id': 'med-1',
-          'patient_id': 'p-1',
-          'stock_count': 10,
-        }
-      };
-
-      when(() => mockSupabase.from('intake_logs'))
-          .thenAnswer((_) => FakeQueryBuilder(logData));
-      when(() => mockSupabase.from('schedules'))
-          .thenAnswer((_) => FakeQueryBuilder(schedData));
-      when(() => mockSupabase.from('medications'))
-          .thenAnswer((_) => FakeQueryBuilder({'stock_count': 9}));
-
-      final logged = await repository.logAdherence(
+      final log = await repository.logAdherence(
         IntakeLogCreateInput(
           clientUuid: 'uuid-1',
-          scheduleId: 'sched-10',
-          scheduledTime: DateTime.parse('2026-10-25T08:00:00Z'),
+          scheduleId: 'sched-1',
+          scheduledTime: DateTime.utc(2026, 10, 27, 8),
           status: 'taken',
         ),
       );
 
-      expect(logged.id, 'log-new');
-      expect(logged.status, 'taken');
+      expect(log.id, 'log-1');
+      expect(rpcParams?['p_client_uuid'], 'uuid-1');
+      expect(rpcParams?['p_status'], 'taken');
+      expect(rpcParams?['p_logged_offline'], false);
     });
+
+    test(
+      'syncBatch retries each offline intake through the same RPC',
+      () async {
+        final received = <Map<String, dynamic>>[];
+        when(
+          () => supabase.rpc<Map<String, dynamic>>(
+            'record_intake_log',
+            params: any(named: 'params'),
+          ),
+        ).thenAnswer((invocation) {
+          final params = Map<String, dynamic>.from(
+            invocation.namedArguments[#params] as Map,
+          );
+          received.add(params);
+          return FakeRpcBuilder<Map<String, dynamic>>({
+            'id': 'log-${params['p_client_uuid']}',
+            'client_uuid': params['p_client_uuid'],
+            'schedule_id': params['p_schedule_id'],
+            'patient_id': 'patient-1',
+            'scheduled_time': params['p_scheduled_time'],
+            'actual_time': params['p_actual_time'],
+            'status': params['p_status'],
+            'logged_offline': true,
+          });
+        });
+
+        final synced = await repository.syncBatch([
+          {
+            'client_uuid': 'offline-uuid',
+            'entity': 'intake_log',
+            'op': 'create',
+            'payload': {
+              'schedule_id': 'sched-1',
+              'scheduled_time': '2026-10-27T08:00:00Z',
+              'status': 'taken',
+            },
+          },
+          {
+            'client_uuid': 'vital-uuid',
+            'entity': 'vitals_log',
+            'op': 'create',
+            'payload': const <String, dynamic>{},
+          },
+        ]);
+
+        expect(synced, ['offline-uuid']);
+        expect(received, hasLength(1));
+        expect(received.single['p_logged_offline'], true);
+      },
+    );
   });
 }

@@ -1,28 +1,28 @@
-# قواعد العمل (Conventions)
+# قواعد العمل
 
 ## Git
-- Branches: `main` (مستقر) ← `develop` ← `feature/<scope>-<short>` / `fix/...`
-- Commits (Conventional): `feat(mobile): add alarm screen` · `fix(api): ...` · `docs: ...` · `test: ...` · `chore: ...`
-- PR إلزامي + مراجعة شخص واحد على الأقل + CI أخضر.
+- Branches: main وdevelop وfeature/<scope>-<short> أو fix/<short>.
+- Commits (Conventional): feat(mobile): ... · fix(mobile): ... · docs: ... · test: ... · chore: ...
+- PR إلزامي حسب سير الفريق، مع مراجعة شخص آخر وفحوص ناجحة.
 
 ## Code Style
 | الجزء | الأدوات |
 |---|---|
-| Flutter | `flutter analyze`, `very_good_analysis`, `dart format` |
-| Python | `ruff` (lint + format), `mypy`, `pytest` |
-| Web | ESLint, Prettier, TypeScript strict |
+| Flutter/Dart | flutter analyze وdart format |
+| Supabase SQL | migrations مرتبة، أسماء snake_case، RLS لكل جدول مكشوف |
+| Edge Functions | TypeScript وDeno، أسرار خارج ملفات المصدر |
 
 ## التسمية
-- Dart: ملفات `snake_case.dart`، Classes `PascalCase`.
-- Python: `snake_case`، Pydantic schemas بلاحقة `In/Out` (`MedicationIn`).
-- DB: جداول جمع `snake_case`، FK بصيغة `<entity>_id`.
-- API: kebab/plural nouns (`/medications`).
+- Dart: ملفات snake_case.dart، Classes بصيغة PascalCase.
+- SQL: الجداول والدوال snake_case، ومفاتيح FK بصيغة <entity>_id.
+- Edge Functions: أسماء kebab-case.
 
 ## الأسرار
-- ممنوع رفع `.env` أو مفاتيح. استخدم `infra/.env.example` و GitHub Secrets.
+- لا ترفع ملفات الأسرار أو مفاتيح Supabase السرية.
+- استخدم المفتاح العام فقط في Flutter؛ أبقِ مفاتيح الخادم في أسرار Supabase.
 
 ## Definition of Done
-- [ ] الكود متراجع ومدموج
-- [ ] Tests مكتوبة وناجحة
-- [ ] الترجمة (ar/en) مضافة
-- [ ] التوثيق محدّث
+- [ ] تغييرات الكود متوافقة مع RLS وRPC أو Edge Function المقابلة.
+- [ ] الاختبارات والفحوص المتأثرة ناجحة.
+- [ ] الترجمة العربية والإنجليزية محدثة لأي نص ظاهر.
+- [ ] التوثيق محدث.

@@ -297,12 +297,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get triageCritical => 'حرج / خطر';
 
   @override
-  String get voiceVitalButton => 'إدخال صوتي';
-
-  @override
-  String get voiceVitalConfirmTitle => 'تأكيد القراءة الصوتية';
-
-  @override
   String get confirmSaveButton => 'تأكيد وحفظ';
 
   @override
@@ -409,9 +403,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navInventoryComm => 'المخزون والتواصل';
 
   @override
-  String get navVoiceVitals => 'القياس بالصوت';
-
-  @override
   String get navSos => 'استغاثة';
 
   @override
@@ -430,7 +421,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get todayMedicationCardTitle => 'دواء اليوم';
 
   @override
-  String get weeklyAdherenceTitle => 'الالتزام بالأدوية هذا الأسبوع';
+  String get weeklyAdherenceTitle => 'التزامك اليوم';
 
   @override
   String weeklyAdherenceSub(int taken, int total) {
@@ -439,6 +430,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get weeklyAdherenceKeepUp => 'أحسنت، استمر';
+
+  @override
+  String get noPendingDose => 'لا توجد جرعة معلّقة الآن';
 
   @override
   String get timeForMedicationTitle => 'حان وقت الدواء';
@@ -476,7 +470,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get unitMgDl => 'مجم/دسل';
 
   @override
-  String get lastReadingToday => 'آخر قياس: اليوم';
+  String lastReadingAt(String time) {
+    return 'آخر قياس: $time';
+  }
 
   @override
   String get escalationReminder15m => '+15 دقيقة: تم إرسال تذكير';
@@ -559,15 +555,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get downloadPdfButton => 'تحميل PDF';
-
-  @override
-  String get voiceVitalTitle => 'القياس بالصوت';
-
-  @override
-  String get voiceVitalSubtitle => 'تحدث لإدخال قياساتك بسهولة';
-
-  @override
-  String get pressAndSpeak => 'اضغط وتكلم';
 
   @override
   String get vitalLoggedSuccess => 'تم تسجيل القياس';
@@ -816,11 +803,23 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get defaultSampleTime => '8:00 صباحاً';
+  String get prescriptionPatientRequired => 'اختر المريض قبل مسح الروشتة.';
 
   @override
-  String get defaultSampleVitalTime => '7:30 صباحاً';
+  String get pillImageTitle => 'صورة الدواء';
 
   @override
-  String get defaultSampleMedication => 'أملوديبين 5 مجم';
+  String get pillImageEmpty => 'لم تتم إضافة صورة للدواء بعد';
+
+  @override
+  String get pillImageUnavailable => 'صورة الدواء غير متاحة حاليًا';
+
+  @override
+  String get pillImageUploadButton => 'إضافة أو تغيير الصورة';
+
+  @override
+  String get pillImageUploadSuccess => 'تم حفظ صورة الدواء بأمان';
+
+  @override
+  String get pillImageUploadFailed => 'تعذر حفظ صورة الدواء';
 }

@@ -23,13 +23,12 @@ void main() {
     repository = MockVitalsRepository();
   });
 
-  testWidgets('VitalsScreen adds a reading and shows triage label',
-      (tester) async {
+  testWidgets('VitalsScreen adds a reading and shows triage label', (
+    tester,
+  ) async {
     when(() => repository.listVitals('patient-1'))
         .thenAnswer((_) async => const []);
-    when(
-      () => repository.createVital('patient-1', any()),
-    ).thenAnswer(
+    when(() => repository.createVital('patient-1', any())).thenAnswer(
       (_) async => VitalReadingModel(
         id: 'vital-1',
         patientId: 'patient-1',
@@ -57,6 +56,11 @@ void main() {
     );
 
     await tester.pumpAndSettle();
+
+    expect(find.text('لا توجد قياسات مسجلة بعد'), findsWidgets);
+    expect(find.text('120 / 80'), findsNothing);
+    expect(find.text('160'), findsNothing);
+    expect(find.textContaining('7:30'), findsNothing);
 
     await tester.enterText(
       find.byKey(const ValueKey('vital_primary_field')),

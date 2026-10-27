@@ -5,6 +5,9 @@ class MedicationForecastModel {
     required this.stockCount,
     required this.daysRemaining,
     this.isLowStock = false,
+    this.isExpired = false,
+    this.isExpiringSoon = false,
+    this.expiryDate,
   });
 
   factory MedicationForecastModel.fromJson(Map<String, dynamic> json) {
@@ -14,6 +17,9 @@ class MedicationForecastModel {
       stockCount: json['stock_count'] as int? ?? 0,
       daysRemaining: json['days_remaining'] as int? ?? 0,
       isLowStock: json['is_low_stock'] as bool? ?? false,
+      isExpired: json['is_expired'] as bool? ?? false,
+      isExpiringSoon: json['is_expiring_soon'] as bool? ?? false,
+      expiryDate: DateTime.tryParse(json['expiry_date']?.toString() ?? ''),
     );
   }
 
@@ -22,6 +28,9 @@ class MedicationForecastModel {
   final int stockCount;
   final int daysRemaining;
   final bool isLowStock;
+  final bool isExpired;
+  final bool isExpiringSoon;
+  final DateTime? expiryDate;
 
   bool get isUnderSevenDays => daysRemaining < 7 || isLowStock;
 }

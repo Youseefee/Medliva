@@ -1,114 +1,65 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/inventory/domain/models/inventory.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class InventoryRepository {
-  InventoryRepository({
-    required ApiClient apiClient,
-    SupabaseClient? supabaseClient,
-  })  : _apiClient = apiClient,
-        _supabaseClient = supabaseClient ?? _tryGetDefaultSupabase();
+  InventoryRepository({SupabaseClient? supabaseClient})
+    : _supabaseClient = supabaseClient ?? Supabase.instance.client;
 
-  final ApiClient _apiClient;
-  final SupabaseClient? _supabaseClient;
-
-  static SupabaseClient? _tryGetDefaultSupabase() {
-    try {
-      return Supabase.instance.client;
-    } catch (_) {
-      return null;
-    }
-  }
+  final SupabaseClient _supabaseClient;
 
   Future<List<MedicationForecastModel>> getForecast(String patientId) async {
-    try {
-      final res = await _apiClient.dio.get<Map<String, dynamic>>(
-        '/patients/$patientId/inventory/forecast',
-      );
-      final rawMeds =
-          res.data?['medications'] as List<dynamic>? ?? const [];
-      return rawMeds
-          .map(
-            (e) =>
-                MedicationForecastModel.fromJson(e as Map<String, dynamic>),
-          )
-          .toList();
-    } catch (e) {
-      if (e is DioException &&
-          (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      if (_supabaseClient != null) {
-        return await _getForecastFromSupabase(patientId);
-      }
-      if (e is DioException && e.error is ApiException) throw e.error!;
-      rethrow;
-    }
-  }
-
-  Future<List<MedicationForecastModel>> _getForecastFromSupabase(
-    String patientId,
-  ) async {
-    final client = _supabaseClient!;
-    final List<dynamic> medsRes = await client
+    final rows = await _supabaseClient
         .from('medications')
-        .select('*, schedules(*)')
+        .select(
+          'id, name, stock_count, alert_threshold_days, expiry_date, '
+          'schedules(dose_amount, is_active)',
+        )
         .eq('patient_id', patientId)
         .eq('is_active', true);
 
-    final List<MedicationForecastModel> forecasts = [];
-
-    for (final rawMed in medsRes) {
-      final med = Map<String, dynamic>.from(rawMed as Map);
-      final medId = med['id']?.toString() ?? '';
-      final name = med['name']?.toString() ?? '';
-      final stockCount = (med['stock_count'] as num?)?.toInt() ?? 0;
-      final alertThreshold =
-          (med['alert_threshold_days'] as num?)?.toInt() ?? 5;
-
-      List<dynamic> schedules = [];
-      if (med['schedules'] is List) {
-        schedules = med['schedules'] as List<dynamic>;
-      } else {
-        try {
-          final schedRes = await client
-              .from('schedules')
-              .select()
-              .eq('medication_id', medId)
-              .eq('is_active', true);
-          schedules = schedRes as List<dynamic>;
-        } catch (_) {}
-      }
-
-      double dailyDose = 0;
-      for (final s in schedules) {
-        final sMap = Map<String, dynamic>.from(s as Map);
-        final isActive = sMap['is_active'] as bool? ?? true;
-        if (isActive) {
-          dailyDose += (sMap['dose_amount'] as num?)?.toDouble() ?? 1.0;
-        }
-      }
-
-      final int daysRemaining =
-          dailyDose > 0 ? (stockCount / dailyDose).floor() : 999;
-      final bool isLowStock = daysRemaining <= alertThreshold;
-
-      forecasts.add(
-        MedicationForecastModel(
-          medicationId: medId,
-          name: name,
-          stockCount: stockCount,
-          daysRemaining: daysRemaining,
-          isLowStock: isLowStock,
-        ),
+    final today = DateTime.now().toUtc();
+    final todayDate = DateTime.utc(today.year, today.month, today.day);
+    return (rows as List<dynamic>).map((raw) {
+      final med = Map<String, dynamic>.from(raw as Map);
+      final activeSchedules = (med['schedules'] as List<dynamic>? ?? const [])
+          .map((schedule) => Map<String, dynamic>.from(schedule as Map))
+          .where((schedule) => schedule['is_active'] as bool? ?? true);
+      final dailyDose = activeSchedules.fold<double>(
+        0,
+        (total, schedule) =>
+            total + ((schedule['dose_amount'] as num?)?.toDouble() ?? 1),
       );
-    }
+      final stockCount = (med['stock_count'] as num?)?.toInt() ?? 0;
+      final daysRemaining = dailyDose > 0
+          ? (stockCount / dailyDose).floor()
+          : 999;
+      final threshold = (med['alert_threshold_days'] as num?)?.toInt() ?? 5;
+      final expiryDate = DateTime.tryParse(
+        med['expiry_date']?.toString() ?? '',
+      );
+      final normalizedExpiry = expiryDate == null
+          ? null
+          : DateTime.utc(expiryDate.year, expiryDate.month, expiryDate.day);
+      final isExpired =
+          normalizedExpiry != null && normalizedExpiry.isBefore(todayDate);
+      final isExpiringSoon =
+          normalizedExpiry != null &&
+          !isExpired &&
+          !normalizedExpiry.isAfter(todayDate.add(const Duration(days: 30)));
 
-    return forecasts;
+      return MedicationForecastModel(
+        medicationId: med['id']?.toString() ?? '',
+        name: med['name']?.toString() ?? '',
+        stockCount: stockCount,
+        daysRemaining: daysRemaining,
+        isLowStock: daysRemaining <= threshold,
+        isExpired: isExpired,
+        isExpiringSoon: isExpiringSoon,
+        expiryDate: normalizedExpiry,
+      );
+    }).toList();
   }
 
   Future<RefillOrderResult> createRefillOrder({
@@ -116,81 +67,39 @@ class InventoryRepository {
     required String medicationName,
     int quantity = 1,
   }) async {
-    try {
-      final res = await _apiClient.dio.post<Map<String, dynamic>>(
-        '/patients/$patientId/inventory/refill-order',
-        data: {
-          'items': [
-            {'name': medicationName, 'quantity': quantity},
-          ],
-        },
-      );
-      return RefillOrderResult.fromJson(res.data!);
-    } catch (e) {
-      if (e is DioException &&
-          (e.response?.statusCode == 401 || e.response?.statusCode == 403)) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-      if (_supabaseClient != null) {
-        return await _createRefillOrderFromSupabase(
-          patientId: patientId,
-          medicationName: medicationName,
-          quantity: quantity,
-        );
-      }
-      if (e is DioException && e.error is ApiException) throw e.error!;
-      rethrow;
+    if (quantity < 1) throw ArgumentError.value(quantity, 'quantity');
+
+    var patientName = 'المريض';
+    String? address;
+    final user = await _supabaseClient
+        .from('users')
+        .select('name, address')
+        .eq('id', patientId)
+        .maybeSingle();
+    if (user != null) {
+      final name = user['name'] as String?;
+      if (name != null && name.trim().isNotEmpty) patientName = name.trim();
+      address = user['address'] as String?;
     }
-  }
-
-  Future<RefillOrderResult> _createRefillOrderFromSupabase({
-    required String patientId,
-    required String medicationName,
-    int quantity = 1,
-  }) async {
-    final client = _supabaseClient!;
-    String patientName = 'المريض';
-    String? patientAddress;
-
-    try {
-      final userRow = await client
-          .from('users')
-          .select('name, address')
-          .eq('id', patientId)
-          .maybeSingle();
-      if (userRow != null) {
-        final name = userRow['name'] as String?;
-        if (name != null && name.trim().isNotEmpty) {
-          patientName = name.trim();
-        }
-        patientAddress = userRow['address'] as String?;
-      }
-    } catch (_) {}
 
     final lines = [
       'السلام عليكم، أود طلب نواقص أدوية للمريض: $patientName',
       'الأدوية المطلوبة:',
       '• $medicationName: $quantity عبوة',
     ];
-    if (patientAddress != null && patientAddress.trim().isNotEmpty) {
-      lines.add('العنوان: ${patientAddress.trim()}');
+    if (address != null && address.trim().isNotEmpty) {
+      lines.add('العنوان: ${address.trim()}');
     }
     lines.add('شكراً جزيلاً.');
-    final messageText = lines.join('\n');
-    final encodedText = Uri.encodeComponent(messageText);
-    final whatsappUrl = 'https://wa.me/?text=$encodedText';
 
+    final messageText = lines.join('\n');
     return RefillOrderResult(
       messageText: messageText,
-      whatsappUrl: whatsappUrl,
+      whatsappUrl: 'https://wa.me/?text=${Uri.encodeComponent(messageText)}',
     );
   }
 }
 
 final inventoryRepositoryProvider = Provider<InventoryRepository>((ref) {
-  return InventoryRepository(
-    apiClient: ref.watch(apiClientProvider),
-    supabaseClient: ref.watch(supabaseClientProvider),
-  );
+  return InventoryRepository(supabaseClient: ref.watch(supabaseClientProvider));
 });

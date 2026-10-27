@@ -15,7 +15,6 @@ import 'package:medliva/features/prescription/presentation/screens/prescription_
 import 'package:medliva/features/reports/presentation/screens/doctor_report_screen.dart';
 import 'package:medliva/features/vitals/presentation/screens/vitals_screen.dart';
 import 'package:medliva/features/vitals/presentation/screens/vitals_trends_screen.dart';
-import 'package:medliva/features/vitals/presentation/screens/voice_vital_entry.dart';
 import 'package:medliva/l10n/app_localizations.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -36,7 +35,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     final user = authState.value;
     final isEnglish = Localizations.localeOf(context).languageCode == 'en';
-    final userName = user?.name ??
+    final userName =
+        user?.name ??
         user?.email ??
         user?.phone ??
         (isEnglish ? 'Ahmed' : 'عم أحمد');
@@ -261,15 +261,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     String userName,
     String roleName,
   ) {
-    final doses = ref.watch(todayDosesNotifierProvider).value ?? const [];
-    final totalCount = doses.isEmpty ? 7 : doses.length;
-    final takenCount = doses.isEmpty
-        ? 6
-        : doses.where((d) => d.status == 'taken').length;
+    final dosesAsync = ref.watch(todayDosesNotifierProvider);
+    final doses = dosesAsync.value ?? const [];
+    final totalCount = doses.length;
+    final takenCount = doses.where((d) => d.status == 'taken').length;
     final adherencePct = totalCount > 0
         ? ((takenCount / totalCount) * 100).round()
-        : 85;
-    final nextDose = doses.firstOrNull;
+        : 0;
+    final nextDose = doses.where((d) => d.isActionable).firstOrNull;
 
     return Padding(
       padding: const EdgeInsetsDirectional.all(16),
@@ -323,21 +322,37 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ],
                         ),
                         const SizedBox(height: 6),
-                        Text(
-                          nextDose?.medicationName ??
-                              l10n.defaultSampleMedication,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                        if (nextDose != null)
+                          Text(
+                            nextDose.medicationName,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        else if (dosesAsync.isLoading && !dosesAsync.hasValue)
+                          const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          Text(
+                            dosesAsync.hasError
+                                ? l10n.errorOccurred
+                                : l10n.noPendingDose,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          nextDose != null
-                              ? l10n.timeAt(nextDose.timeOfDay)
-                              : l10n.timeAt(l10n.defaultSampleTime),
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        if (nextDose != null)
+                          Text(
+                            l10n.timeAt(nextDose.timeOfDay),
+                            style: theme.textTheme.bodySmall,
+                          ),
                       ],
                     ),
                   ),
@@ -354,49 +369,82 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   child: Row(
                     children: [
-                      SizedBox(
-                        width: 52,
-                        height: 52,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            CircularProgressIndicator(
-                              value: (adherencePct / 100).clamp(0.0, 1.0),
-                              strokeWidth: 6,
-                              backgroundColor: Colors.grey.shade200,
-                              color: const Color(0xFF00796B),
-                            ),
-                            Center(
-                              child: Text(
-                                '$adherencePct%',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                      if (totalCount > 0)
+                        SizedBox(
+                          width: 52,
+                          height: 52,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              CircularProgressIndicator(
+                                value: (adherencePct / 100).clamp(0.0, 1.0),
+                                strokeWidth: 6,
+                                backgroundColor: Colors.grey.shade200,
+                                color: const Color(0xFF00796B),
+                              ),
+                              Center(
+                                child: Text(
+                                  '$adherencePct%',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        )
+                      else if (dosesAsync.isLoading && !dosesAsync.hasValue)
+                        const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        const Icon(
+                          Icons.event_busy_rounded,
+                          size: 32,
+                          color: Color(0xFF64748B),
                         ),
-                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l10n.weeklyAdherenceSub(takenCount, totalCount),
-                              style: theme.textTheme.bodyMedium?.copyWith(
+                              l10n.weeklyAdherenceTitle,
+                              style: theme.textTheme.bodySmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            Text(
-                              l10n.weeklyAdherenceKeepUp,
-                              style: const TextStyle(
-                                color: Color(0xFF00796B),
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
+                            if (totalCount > 0)
+                              Text(
+                                l10n.weeklyAdherenceSub(takenCount, totalCount),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            else if (!(dosesAsync.isLoading &&
+                                !dosesAsync.hasValue))
+                              Text(
+                                dosesAsync.hasError
+                                    ? l10n.errorOccurred
+                                    : l10n.noDosesToday,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
+                            if (totalCount > 0 && takenCount > 0)
+                              Text(
+                                l10n.weeklyAdherenceKeepUp,
+                                style: const TextStyle(
+                                  color: Color(0xFF00796B),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -424,93 +472,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     AppLocalizations l10n,
     ThemeData theme,
   ) {
-    final items = <({
-      IconData icon,
-      Color color,
-      String title,
-      VoidCallback onTap,
-    })>[
-      (
-        icon: Icons.mic_rounded,
-        color: const Color(0xFF00897B),
-        title: l10n.navVoiceVitals,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const VoiceVitalsScreen()),
-        ),
-      ),
-      (
-        icon: Icons.document_scanner_rounded,
-        color: const Color(0xFF0284C7),
-        title: l10n.scanPrescriptionTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const PrescriptionScanScreen(),
+    final items =
+        <({IconData icon, Color color, String title, VoidCallback onTap})>[
+          (
+            icon: Icons.document_scanner_rounded,
+            color: const Color(0xFF0284C7),
+            title: l10n.scanPrescriptionTitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const PrescriptionScanScreen(),
+              ),
+            ),
           ),
-        ),
-      ),
-      (
-        icon: Icons.notifications_active_rounded,
-        color: const Color(0xFFF59E0B),
-        title: l10n.timeForMedicationTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const DoseReminderScreen()),
-        ),
-      ),
-      (
-        icon: Icons.sos_rounded,
-        color: const Color(0xFFDC2626),
-        title: l10n.sosScreenTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const SosEmergencyScreen()),
-        ),
-      ),
-      (
-        icon: Icons.show_chart_rounded,
-        color: const Color(0xFF7C3AED),
-        title: l10n.navTrends,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const VitalsTrendsScreen()),
-        ),
-      ),
-      (
-        icon: Icons.inventory_2_rounded,
-        color: const Color(0xFF0D9488),
-        title: l10n.navInventoryComm,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const InventoryScreen()),
-        ),
-      ),
-      (
-        icon: Icons.picture_as_pdf_rounded,
-        color: const Color(0xFF2563EB),
-        title: l10n.doctorReportTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const DoctorReportScreen()),
-        ),
-      ),
-      (
-        icon: Icons.notifications_rounded,
-        color: const Color(0xFFEA580C),
-        title: l10n.notificationsTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const NotificationsScreen()),
-        ),
-      ),
-      (
-        icon: Icons.qr_code_rounded,
-        color: const Color(0xFF00796B),
-        title: l10n.pairingCodeTitle,
-        onTap: () => context.push('/caregiver/pairing-code'),
-      ),
-      (
-        icon: Icons.settings_rounded,
-        color: const Color(0xFF475569),
-        title: l10n.settingsTitle,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
-        ),
-      ),
-    ];
+          (
+            icon: Icons.notifications_active_rounded,
+            color: const Color(0xFFF59E0B),
+            title: l10n.timeForMedicationTitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const DoseReminderScreen(),
+              ),
+            ),
+          ),
+          (
+            icon: Icons.sos_rounded,
+            color: const Color(0xFFDC2626),
+            title: l10n.sosScreenTitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const SosEmergencyScreen(),
+              ),
+            ),
+          ),
+          (
+            icon: Icons.show_chart_rounded,
+            color: const Color(0xFF7C3AED),
+            title: l10n.navTrends,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const VitalsTrendsScreen(),
+              ),
+            ),
+          ),
+          (
+            icon: Icons.inventory_2_rounded,
+            color: const Color(0xFF0D9488),
+            title: l10n.navInventoryComm,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const InventoryScreen()),
+            ),
+          ),
+          (
+            icon: Icons.picture_as_pdf_rounded,
+            color: const Color(0xFF2563EB),
+            title: l10n.doctorReportTitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const DoctorReportScreen(),
+              ),
+            ),
+          ),
+          (
+            icon: Icons.notifications_rounded,
+            color: const Color(0xFFEA580C),
+            title: l10n.notificationsTitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const NotificationsScreen(),
+              ),
+            ),
+          ),
+          (
+            icon: Icons.qr_code_rounded,
+            color: const Color(0xFF00796B),
+            title: l10n.pairingCodeTitle,
+            onTap: () => context.push('/caregiver/pairing-code'),
+          ),
+          (
+            icon: Icons.settings_rounded,
+            color: const Color(0xFF475569),
+            title: l10n.settingsTitle,
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const ProfileScreen()),
+            ),
+          ),
+        ];
 
     return GridView.builder(
       padding: const EdgeInsetsDirectional.all(16),

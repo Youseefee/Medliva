@@ -1,19 +1,14 @@
-import 'package:dio/dio.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/core/storage/token_storage.dart';
 import 'package:medliva/features/auth/domain/models/user.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthRepository {
   AuthRepository({
-    required ApiClient apiClient,
     required TokenStorage tokenStorage,
     required SupabaseClient supabaseClient,
-  }) : _apiClient = apiClient,
-       _tokenStorage = tokenStorage,
+  }) : _tokenStorage = tokenStorage,
        _supabaseClient = supabaseClient;
 
-  final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
   final SupabaseClient _supabaseClient;
 
@@ -22,13 +17,12 @@ class AuthRepository {
 
   UserModel _userFromAuth(User user, [Map<String, dynamic>? dbRow]) {
     final meta = user.userMetadata ?? {};
-    final id = user.id;
-    final email = user.email;
     final phone = user.phone ?? (dbRow?['phone'] as String?);
-    final name = (dbRow?['name'] as String?) ??
+    final name =
+        (dbRow?['name'] as String?) ??
         (meta['full_name'] as String?) ??
         (meta['name'] as String?) ??
-        email?.split('@').first ??
+        user.email?.split('@').first ??
         '';
     final rawRole =
         (dbRow?['role'] as String?) ?? (meta['role'] as String?) ?? 'patient';
@@ -43,8 +37,8 @@ class AuthRepository {
         'Africa/Cairo';
 
     return UserModel(
-      id: id,
-      email: email,
+      id: user.id,
+      email: user.email,
       phone: phone,
       name: name,
       role: role,
@@ -53,41 +47,15 @@ class AuthRepository {
     );
   }
 
-  Future<UserModel> _fetchFromSupabaseDirect(User user) async {
-    Map<String, dynamic>? row;
-    try {
-      final res = await _supabaseClient
-          .from('users')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
-      if (res != null) {
-        row = Map<String, dynamic>.from(res);
-      }
-    } catch (_) {
-      // Ignored if PostgREST request fails
-    }
+  Future<UserModel> _fetchFromSupabase(User user) async {
+    final response = await _supabaseClient
+        .from('users')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
 
-    if (row != null) {
-      return UserModel.fromJson(row);
-    }
-
-    final userModel = _userFromAuth(user);
-    try {
-      await _supabaseClient.from('users').upsert({
-        'id': userModel.id,
-        'email': userModel.email,
-        'phone': userModel.phone,
-        'name': userModel.name,
-        'role': userModel.role,
-        'language': userModel.language,
-        'timezone': userModel.timezone,
-      });
-    } catch (_) {
-      // Ignored
-    }
-
-    return userModel;
+    if (response == null) return _userFromAuth(user);
+    return UserModel.fromJson(Map<String, dynamic>.from(response));
   }
 
   Future<bool> signUp({
@@ -99,30 +67,10 @@ class AuthRepository {
     final response = await _supabaseClient.auth.signUp(
       email: email.trim(),
       password: password,
-      data: {
-        'full_name': name.trim(),
-        'role': role,
-        'language': 'ar',
-      },
+      data: {'full_name': name.trim(), 'role': role, 'language': 'ar'},
     );
 
-    final user = response.user;
-    if (user != null && response.session != null) {
-      try {
-        await _supabaseClient.from('users').upsert({
-          'id': user.id,
-          'email': user.email,
-          'phone': user.phone,
-          'name': name.trim(),
-          'role': role,
-          'language': 'ar',
-          'timezone': 'Africa/Cairo',
-        });
-      } catch (_) {
-        // Trigger on auth.users also takes care of this
-      }
-    }
-
+    // The auth.users trigger creates the corresponding public.users row.
     return response.session != null;
   }
 
@@ -130,37 +78,21 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final res = await _supabaseClient.auth.signInWithPassword(
+    final response = await _supabaseClient.auth.signInWithPassword(
       email: email.trim(),
       password: password,
     );
-    return await getMe(currentUser: res.user);
+    return await getMe(currentUser: response.user);
   }
 
   Future<UserModel> getMe({User? currentUser}) async {
-    try {
-      final res = await _apiClient.dio.get<Map<String, dynamic>>('/me');
-      return UserModel.fromJson(res.data!);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        if (e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-
-      final authUser = currentUser ?? _supabaseClient.auth.currentUser;
-      if (authUser != null) {
-        return await _fetchFromSupabaseDirect(authUser);
-      }
-
-      if (e.error is ApiException) throw e.error!;
-      rethrow;
-    } catch (_) {
-      final authUser = currentUser ?? _supabaseClient.auth.currentUser;
-      if (authUser != null) {
-        return await _fetchFromSupabaseDirect(authUser);
-      }
-      rethrow;
+    final authUser = currentUser ?? _supabaseClient.auth.currentUser;
+    if (authUser == null) {
+      throw StateError(
+        'A signed-in Supabase user is required to load a profile.',
+      );
     }
+    return await _fetchFromSupabase(authUser);
   }
 
   Future<UserModel> updateMe({
@@ -168,53 +100,58 @@ class AuthRepository {
     String? language,
     String? role,
   }) async {
-    try {
-      final res = await _apiClient.dio.patch<Map<String, dynamic>>(
-        '/me',
-        data: {
-          if (name != null) 'name': name,
-          if (language != null) 'language': language,
-          if (role != null) 'role': role,
-        },
-      );
-      return UserModel.fromJson(res.data!);
-    } catch (e) {
-      final authUser = _supabaseClient.auth.currentUser;
-      if (authUser == null) {
-        if (e is DioException && e.error is ApiException) throw e.error!;
-        rethrow;
-      }
-
-      final metaUpdates = <String, dynamic>{
-        if (name != null) 'full_name': name,
-        if (language != null) 'language': language,
-        if (role != null) 'role': role,
-      };
-      if (metaUpdates.isNotEmpty) {
-        try {
-          await _supabaseClient.auth.updateUser(
-            UserAttributes(data: metaUpdates),
-          );
-        } catch (_) {}
-      }
-
-      final dbUpdates = <String, dynamic>{
-        if (name != null) 'name': name,
-        if (language != null) 'language': language,
-        if (role != null) 'role': role,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-      try {
-        await _supabaseClient
-            .from('users')
-            .update(dbUpdates)
-            .eq('id', authUser.id);
-      } catch (_) {}
-
-      return await _fetchFromSupabaseDirect(
-        _supabaseClient.auth.currentUser ?? authUser,
+    if (name != null && name.length > 100) {
+      throw ArgumentError.value(
+        name,
+        'name',
+        'Must be 100 characters or fewer.',
       );
     }
+    if (language != null && language.length > 10) {
+      throw ArgumentError.value(
+        language,
+        'language',
+        'Must be 10 characters or fewer.',
+      );
+    }
+    final normalizedRole = role?.trim().toLowerCase();
+    if (normalizedRole != null &&
+        normalizedRole != 'patient' &&
+        normalizedRole != 'caregiver') {
+      throw ArgumentError.value(
+        role,
+        'role',
+        'Only patient and caregiver roles can be selected.',
+      );
+    }
+
+    final authUser = _supabaseClient.auth.currentUser;
+    if (authUser == null) {
+      throw StateError(
+        'A signed-in Supabase user is required to update a profile.',
+      );
+    }
+
+    final updates = <String, dynamic>{
+      if (name != null) 'name': name,
+      if (language != null) 'language': language,
+      if (normalizedRole != null) 'role': normalizedRole,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    };
+
+    final response = await _supabaseClient
+        .from('users')
+        .update(updates)
+        .eq('id', authUser.id)
+        .select()
+        .maybeSingle();
+
+    if (response == null) {
+      throw StateError(
+        'The signed-in user profile does not exist in Supabase.',
+      );
+    }
+    return UserModel.fromJson(Map<String, dynamic>.from(response));
   }
 
   Future<void> logout() => _tokenStorage.clearTokens();

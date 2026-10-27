@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/l10n/app_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -67,10 +66,6 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
             ? 'Please confirm your email before signing in.'
             : 'يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إليك';
       }
-      return error.message;
-    }
-
-    if (error is ApiException) {
       return error.message;
     }
 

@@ -20,8 +20,7 @@ class ExtractedDrugModel {
       mealRelation: json['meal_relation'] as String? ?? 'after_meal',
       times: rawTimes.map((e) => e.toString()).toList(),
       inventoryPills: json['inventory_pills'] as int? ?? 30,
-      confidenceScore:
-          (json['confidence_score'] as num?)?.toDouble() ?? 0.95,
+      confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0.95,
       activeIngredient: json['active_ingredient'] as String?,
     );
   }
@@ -39,7 +38,8 @@ class ExtractedDrugModel {
 class PrescriptionScanResult {
   const PrescriptionScanResult({
     required this.medications,
-    this.confidence = 0.95,
+    this.confidence = 0.0,
+    this.source = 'text',
   });
 
   factory PrescriptionScanResult.fromJson(Map<String, dynamic> json) {
@@ -48,10 +48,12 @@ class PrescriptionScanResult {
       medications: rawMeds
           .map((e) => ExtractedDrugModel.fromJson(e as Map<String, dynamic>))
           .toList(),
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.95,
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      source: json['source'] as String? ?? 'text',
     );
   }
 
   final List<ExtractedDrugModel> medications;
   final double confidence;
+  final String source;
 }

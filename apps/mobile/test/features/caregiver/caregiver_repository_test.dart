@@ -1,69 +1,17 @@
 import 'dart:async';
-import 'package:dio/dio.dart';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:medliva/core/network/api_client.dart';
 import 'package:medliva/features/caregiver/data/caregiver_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-class MockApiClient extends Mock implements ApiClient;
-
-class MockDio extends Mock implements Dio;
 
 class MockSupabaseClient extends Mock implements SupabaseClient;
 
 class MockGoTrueClient extends Mock implements GoTrueClient;
 
-class MockSupabaseQueryBuilder extends Mock implements SupabaseQueryBuilder;
+class FakeRpcBuilder<T> extends Fake implements PostgrestFilterBuilder<T> {
+  FakeRpcBuilder(this._value);
 
-class FakePostgrestFilterBuilder extends Fake
-    implements PostgrestFilterBuilder<List<Map<String, dynamic>>> {
-  FakePostgrestFilterBuilder({
-    List<Map<String, dynamic>>? listValue,
-    Map<String, dynamic>? singleValue,
-  })  : _listValue = listValue ?? const [],
-        _singleValue = singleValue;
-
-  final List<Map<String, dynamic>> _listValue;
-  final Map<String, dynamic>? _singleValue;
-
-  @override
-  PostgrestFilterBuilder<List<Map<String, dynamic>>> eq(
-    String column,
-    Object value,
-  ) =>
-      this;
-
-  @override
-  PostgrestFilterBuilder<List<Map<String, dynamic>>> filter(
-    String column,
-    String operator,
-    Object? value,
-  ) =>
-      this;
-
-  @override
-  PostgrestTransformBuilder<Map<String, dynamic>?> maybeSingle() =>
-      FakePostgrestTransformBuilder<Map<String, dynamic>?>(_singleValue);
-
-  @override
-  PostgrestTransformBuilder<Map<String, dynamic>> single() =>
-      FakePostgrestTransformBuilder<Map<String, dynamic>>(
-        _singleValue ?? (_listValue.isNotEmpty ? _listValue.first : {}),
-      );
-
-  @override
-  Future<R> then<R>(
-    FutureOr<R> Function(List<Map<String, dynamic>> value) onValue, {
-    Function? onError,
-  }) {
-    return Future.value(_listValue).then(onValue, onError: onError);
-  }
-}
-
-class FakePostgrestTransformBuilder<T> extends Fake
-    implements PostgrestTransformBuilder<T> {
-  FakePostgrestTransformBuilder(this._value);
   final T _value;
 
   @override
@@ -71,291 +19,227 @@ class FakePostgrestTransformBuilder<T> extends Fake
     FutureOr<R> Function(T value) onValue, {
     Function? onError,
   }) {
-    return Future.value(_value).then(onValue, onError: onError);
+    return Future<T>.value(_value).then(onValue, onError: onError);
   }
 }
 
 void main() {
-  late MockApiClient mockApiClient;
-  late MockDio mockDio;
-  late MockSupabaseClient mockSupabase;
-  late MockGoTrueClient mockAuth;
-  late CaregiverRepository repo;
+  late MockSupabaseClient supabase;
+  late MockGoTrueClient auth;
+  late CaregiverRepository repository;
 
   setUp(() {
-    mockApiClient = MockApiClient();
-    mockDio = MockDio();
-    mockSupabase = MockSupabaseClient();
-    mockAuth = MockGoTrueClient();
-    when(() => mockApiClient.dio).thenReturn(mockDio);
-    when(() => mockSupabase.auth).thenReturn(mockAuth);
+    supabase = MockSupabaseClient();
+    auth = MockGoTrueClient();
+    when(() => supabase.auth).thenReturn(auth);
 
-    const mockUser = User(
+    const user = User(
       id: 'current-user-id',
       appMetadata: {},
       userMetadata: {},
       aud: 'authenticated',
-      createdAt: '2026-10-25T12:00:00Z',
+      createdAt: '2026-10-27T12:00:00Z',
     );
-    when(() => mockAuth.currentUser).thenReturn(mockUser);
-
-    repo = CaregiverRepository(
-      apiClient: mockApiClient,
-      supabaseClient: mockSupabase,
-    );
+    when(() => auth.currentUser).thenReturn(user);
+    repository = CaregiverRepository(supabaseClient: supabase);
   });
 
-  group('CaregiverRepository API tests', () {
-    test('generatePairingCode returns code and expiration on API success',
-        () async {
+  test(
+    'generates a pairing code with the authenticated Supabase RPC',
+    () async {
       when(
-        () => mockDio.post<Map<String, dynamic>>('/caregiver/pairing-code'),
-      ).thenAnswer(
-        (_) async => Response(
-          requestOptions: RequestOptions(path: '/caregiver/pairing-code'),
-          data: {
-            'code': '123456',
-            'expires_at': '2026-10-25T12:10:00Z',
-          },
+        () => supabase.rpc<Map<String, dynamic>>(
+          'generate_caregiver_pairing_code',
+          params: any(named: 'params'),
         ),
+      ).thenAnswer(
+        (_) => FakeRpcBuilder<Map<String, dynamic>>({
+          'code': '123456',
+          'expires_at': '2026-10-27T12:10:00Z',
+        }),
       );
 
-      final result = await repo.generatePairingCode();
+      final result = await repository.generatePairingCode();
+
       expect(result.code, '123456');
-      expect(result.expiresAt.isUtc, isTrue);
-    });
-
-    test('pairWithPatient pairs and returns linked patient on API success',
-        () async {
-      when(
-        () => mockDio.post<Map<String, dynamic>>(
-          '/caregiver/pair',
-          data: {'code': '123456'},
+      expect(result.expiresAt, DateTime.utc(2026, 10, 27, 12, 10));
+      verify(
+        () => supabase.rpc<Map<String, dynamic>>(
+          'generate_caregiver_pairing_code',
+          params: any(named: 'params'),
         ),
-      ).thenAnswer(
-        (_) async => Response(
-          requestOptions: RequestOptions(path: '/caregiver/pair'),
-          data: {
-            'patient_id': 'patient-1',
-            'name': 'الوالد',
-            'phone': '01012345678',
-            'status': 'active',
-            'linked_at': '2026-10-25T12:00:00Z',
-          },
-        ),
-      );
+      ).called(1);
+    },
+  );
 
-      final patient = await repo.pairWithPatient('123456');
-      expect(patient.patientId, 'patient-1');
-      expect(patient.name, 'الوالد');
-      expect(patient.status, 'active');
-    });
+  test('consumes a trimmed code atomically through Supabase', () async {
+    when(
+      () => supabase.rpc<Map<String, dynamic>>(
+        'consume_caregiver_pairing_code',
+        params: any(named: 'params'),
+      ),
+    ).thenAnswer(
+      (_) => FakeRpcBuilder<Map<String, dynamic>>({
+        'patient_id': 'patient-1',
+        'name': 'الوالد',
+        'phone': '01012345678',
+        'status': 'active',
+        'linked_at': '2026-10-27T12:00:00Z',
+      }),
+    );
 
-    test('listLinkedPatients returns linked patients on API success', () async {
-      when(
-        () => mockDio.get<List<dynamic>>('/caregiver/patients'),
-      ).thenAnswer(
-        (_) async => Response(
-          requestOptions: RequestOptions(path: '/caregiver/patients'),
-          data: [
-            {
-              'patient_id': 'patient-1',
-              'name': 'الوالد',
-              'phone': '01012345678',
-              'status': 'active',
-              'today_taken_count': 2,
-              'today_missed_count': 0,
-              'active_alerts_count': 0,
-            },
-          ],
-        ),
-      );
+    final patient = await repository.pairWithPatient(' 654321 ');
 
-      final patients = await repo.listLinkedPatients();
-      expect(patients, hasLength(1));
-      expect(patients.first.patientId, 'patient-1');
-      expect(patients.first.todayTakenCount, 2);
-    });
-
-    test('listPatientCaregivers returns caregivers on API success', () async {
-      when(
-        () => mockDio.get<List<dynamic>>('/patients/patient-1/caregivers'),
-      ).thenAnswer(
-        (_) async => Response(
-          requestOptions: RequestOptions(
-            path: '/patients/patient-1/caregivers',
-          ),
-          data: [
-            {
-              'caregiver_id': 'caregiver-1',
-              'name': 'أحمد',
-              'phone': '01098765432',
-              'status': 'active',
-            },
-          ],
-        ),
-      );
-
-      final caregivers = await repo.listPatientCaregivers('patient-1');
-      expect(caregivers, hasLength(1));
-      expect(caregivers.first.caregiverId, 'caregiver-1');
-      expect(caregivers.first.displayName, 'أحمد');
-    });
-
-    test('rethrows 401 error', () async {
-      when(
-        () => mockDio.post<Map<String, dynamic>>('/caregiver/pairing-code'),
-      ).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/caregiver/pairing-code'),
-          response: Response(
-            statusCode: 401,
-            requestOptions: RequestOptions(path: '/caregiver/pairing-code'),
-          ),
-          error: ApiException(message: 'غير مصرح', statusCode: 401),
-        ),
-      );
-
-      expect(
-        repo.generatePairingCode,
-        throwsA(isA<ApiException>()),
-      );
-    });
+    expect(patient.patientId, 'patient-1');
+    expect(patient.name, 'الوالد');
+    expect(patient.status, 'active');
+    final params =
+        verify(
+              () => supabase.rpc<Map<String, dynamic>>(
+                'consume_caregiver_pairing_code',
+                params: captureAny(named: 'params'),
+              ),
+            ).captured.single
+            as Map<String, dynamic>;
+    expect(params, {'p_code': '654321'});
   });
 
-  group('CaregiverRepository Supabase Fallback', () {
-    test('generatePairingCode inserts or updates pending code in caregiver_links',
-        () async {
+  test(
+    'loads linked patient summaries and missed doses from dashboard RPC',
+    () async {
       when(
-        () => mockDio.post<Map<String, dynamic>>('/caregiver/pairing-code'),
-      ).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/caregiver/pairing-code'),
-          type: DioExceptionType.connectionError,
+        () => supabase.rpc<List<dynamic>>(
+          'get_caregiver_dashboard',
+          params: any(named: 'params'),
         ),
-      );
-
-      final mockQueryBuilder = MockSupabaseQueryBuilder();
-      when(() => mockSupabase.from('caregiver_links'))
-          .thenAnswer((_) => mockQueryBuilder);
-
-      when(() => mockQueryBuilder.select('id')).thenAnswer(
-        (_) => FakePostgrestFilterBuilder(singleValue: null),
-      );
-      when(() => mockQueryBuilder.insert(any())).thenAnswer(
-        (_) => FakePostgrestFilterBuilder(),
-      );
-
-      final result = await repo.generatePairingCode();
-      expect(result.code, hasLength(6));
-      expect(result.expiresAt.isAfter(DateTime.now()), isTrue);
-    });
-
-    test('pairWithPatient updates caregiver_links and returns linked patient via Supabase',
-        () async {
-      when(
-        () => mockDio.post<Map<String, dynamic>>(
-          '/caregiver/pair',
-          data: {'code': '654321'},
-        ),
-      ).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/caregiver/pair'),
-          type: DioExceptionType.connectionError,
-        ),
-      );
-
-      final mockQueryBuilderLinks = MockSupabaseQueryBuilder();
-      final mockQueryBuilderUsers = MockSupabaseQueryBuilder();
-
-      when(() => mockSupabase.from('caregiver_links'))
-          .thenAnswer((_) => mockQueryBuilderLinks);
-      when(() => mockSupabase.from('users'))
-          .thenAnswer((_) => mockQueryBuilderUsers);
-
-      final futureExpiry = DateTime.now()
-          .toUtc()
-          .add(const Duration(minutes: 5))
-          .toIso8601String();
-
-      when(mockQueryBuilderLinks.select).thenAnswer(
-        (_) => FakePostgrestFilterBuilder(
-          singleValue: {
-            'id': 'link-id-1',
-            'patient_id': 'other-patient-id',
-            'pairing_code': '654321',
-            'pairing_code_expires_at': futureExpiry,
-            'status': 'pending',
+      ).thenAnswer(
+        (_) => FakeRpcBuilder<List<dynamic>>([
+          {
+            'patient_id': 'patient-1',
+            'name': 'فاطمة',
+            'phone': '01222222222',
+            'status': 'active',
+            'linked_at': '2026-10-25T10:00:00Z',
+            'today_taken_count': 2,
+            'today_missed_count': 1,
+            'active_alerts_count': 1,
+            'missed_doses': [
+              {
+                'schedule_id': 'schedule-1',
+                'medication_id': 'medication-1',
+                'medication_name': 'دواء القلب',
+                'time_of_day': '08:00',
+                'scheduled_time': '2026-10-27T08:00:00Z',
+              },
+            ],
           },
-        ),
+        ]),
       );
 
-      when(() => mockQueryBuilderLinks.update(any())).thenAnswer(
-        (_) => FakePostgrestFilterBuilder(),
+      final patients = await repository.listLinkedPatients(
+        now: DateTime.utc(2026, 10, 27, 8, 16),
       );
 
-      when(() => mockQueryBuilderUsers.select('name, phone')).thenAnswer(
-        (_) => FakePostgrestFilterBuilder(
-          singleValue: {'name': 'الحاج محمد', 'phone': '01000000000'},
-        ),
-      );
-
-      final patient = await repo.pairWithPatient('654321');
-
-      expect(patient.patientId, 'other-patient-id');
-      expect(patient.name, 'الحاج محمد');
-      expect(patient.phone, '01000000000');
-      expect(patient.status, 'active');
-    });
-
-    test('listLinkedPatients joins patients from users table via Supabase',
-        () async {
-      when(() => mockDio.get<List<dynamic>>('/caregiver/patients')).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/caregiver/patients'),
-          type: DioExceptionType.connectionError,
-        ),
-      );
-
-      final mockQueryBuilderLinks = MockSupabaseQueryBuilder();
-      final mockQueryBuilderUsers = MockSupabaseQueryBuilder();
-
-      when(() => mockSupabase.from('caregiver_links'))
-          .thenAnswer((_) => mockQueryBuilderLinks);
-      when(() => mockSupabase.from('users'))
-          .thenAnswer((_) => mockQueryBuilderUsers);
-
-      when(mockQueryBuilderLinks.select).thenAnswer(
-        (_) => FakePostgrestFilterBuilder(
-          listValue: [
-            {
-              'id': 'link-101',
-              'patient_id': 'patient-101',
-              'caregiver_id': 'current-user-id',
-              'status': 'active',
-              'linked_at': '2026-10-25T10:00:00Z',
-            },
-          ],
-        ),
-      );
-
-      when(() => mockQueryBuilderUsers.select('id, name, phone')).thenAnswer(
-        (_) => FakePostgrestFilterBuilder(
-          listValue: [
-            {
-              'id': 'patient-101',
-              'name': 'فاطمة',
-              'phone': '01222222222',
-            },
-          ],
-        ),
-      );
-
-      final patients = await repo.listLinkedPatients();
       expect(patients, hasLength(1));
-      expect(patients.first.patientId, 'patient-101');
-      expect(patients.first.name, 'فاطمة');
-      expect(patients.first.phone, '01222222222');
-    });
+      expect(patients.single.patientId, 'patient-1');
+      expect(patients.single.todayTakenCount, 2);
+      expect(patients.single.todayMissedCount, 1);
+      expect(patients.single.missedDoses.single.medicationName, 'دواء القلب');
+      final params =
+          verify(
+                () => supabase.rpc<List<dynamic>>(
+                  'get_caregiver_dashboard',
+                  params: captureAny(named: 'params'),
+                ),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(params['p_now'], '2026-10-27T08:16:00.000Z');
+    },
+  );
+
+  test('lists all missed dose alerts from linked patient summaries', () async {
+    when(
+      () => supabase.rpc<List<dynamic>>(
+        'get_caregiver_dashboard',
+        params: any(named: 'params'),
+      ),
+    ).thenAnswer(
+      (_) => FakeRpcBuilder<List<dynamic>>([
+        {
+          'patient_id': 'patient-1',
+          'missed_doses': [
+            {
+              'schedule_id': 'schedule-1',
+              'medication_id': 'medication-1',
+              'medication_name': 'دواء القلب',
+              'time_of_day': '08:00',
+              'scheduled_time': '2026-10-27T08:00:00Z',
+            },
+          ],
+        },
+        {'patient_id': 'patient-2', 'missed_doses': <dynamic>[]},
+      ]),
+    );
+
+    final alerts = await repository.listCaregiverAlerts();
+
+    expect(alerts, hasLength(1));
+    expect(alerts.single.scheduleId, 'schedule-1');
+    expect(alerts.single.timeOfDay, '08:00');
+  });
+
+  test('lists patient caregivers through a scoped Supabase RPC', () async {
+    when(
+      () => supabase.rpc<List<dynamic>>(
+        'list_patient_caregivers',
+        params: any(named: 'params'),
+      ),
+    ).thenAnswer(
+      (_) => FakeRpcBuilder<List<dynamic>>([
+        {
+          'caregiver_id': 'caregiver-1',
+          'name': 'أحمد',
+          'phone': '01098765432',
+          'status': 'active',
+          'linked_at': '2026-10-25T10:00:00Z',
+        },
+      ]),
+    );
+
+    final caregivers = await repository.listPatientCaregivers('patient-1');
+
+    expect(caregivers, hasLength(1));
+    expect(caregivers.single.caregiverId, 'caregiver-1');
+    expect(caregivers.single.displayName, 'أحمد');
+    verify(
+      () => supabase.rpc<List<dynamic>>(
+        'list_patient_caregivers',
+        params: {'p_patient_id': 'patient-1'},
+      ),
+    ).called(1);
+  });
+
+  test('maps an invalid pairing code error to an Arabic message', () async {
+    when(
+      () => supabase.rpc<Map<String, dynamic>>(
+        'consume_caregiver_pairing_code',
+        params: any(named: 'params'),
+      ),
+    ).thenThrow(
+      const PostgrestException(message: 'INVALID_CODE', code: 'P0001'),
+    );
+
+    await expectLater(
+      repository.pairWithPatient('111111'),
+      throwsA(
+        isA<CaregiverRepositoryException>()
+            .having((error) => error.code, 'code', 'INVALID_CODE')
+            .having(
+              (error) => error.message,
+              'message',
+              'رمز الاقتران غير صحيح أو منتهي الصلاحية',
+            ),
+      ),
+    );
   });
 }
