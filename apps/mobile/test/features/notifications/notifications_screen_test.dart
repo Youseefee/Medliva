@@ -10,6 +10,7 @@ import 'package:medliva/features/notifications/data/alerts_repository.dart';
 import 'package:medliva/features/notifications/domain/models/alert.dart';
 import 'package:medliva/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:medliva/features/vitals/data/vitals_repository.dart';
+import 'package:medliva/features/vitals/domain/models/vital.dart';
 import 'package:medliva/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -180,5 +181,59 @@ void main() {
 
     expect(find.text('لا توجد إشعارات'), findsOneWidget);
     expect(find.byKey(const ValueKey('notif_card_alert_alert-sos')), findsNothing);
+  });
+
+  testWidgets('normal vitals do not raise a red High Vital Reading alert card',
+      (tester) async {
+    when(() => alertsRepository.listAlerts(any(), limit: any(named: 'limit')))
+        .thenAnswer((_) async => const []);
+    when(() => caregiverRepository.listPatientCaregivers(any()))
+        .thenAnswer((_) async => const []);
+    when(() => vitalsRepository.listVitals(any())).thenAnswer(
+      (_) async => [
+        VitalReadingModel(
+          id: 'vital-normal',
+          patientId: 'patient-1',
+          type: 'bp',
+          valuePrimary: 120,
+          valueSecondary: 80,
+          band: 'normal',
+          recordedAt: now,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('ارتفاع في القياس'), findsNothing);
+    expect(find.text('لا توجد إشعارات'), findsOneWidget);
+  });
+
+  testWidgets('error state renders retry button when alerts fail to load',
+      (tester) async {
+    when(() => alertsRepository.listAlerts(any(), limit: any(named: 'limit')))
+        .thenThrow(Exception('network error'));
+    when(() => caregiverRepository.listPatientCaregivers(any()))
+        .thenAnswer((_) async => const []);
+
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('notif_retry_button')), findsOneWidget);
+  });
+
+  test('AlertModel.fromJson reads fallback payload name for medicationName',
+      () {
+    final alert = AlertModel.fromJson({
+      'id': 'a1',
+      'patient_id': 'p1',
+      'type': 'low_stock',
+      'tier': 1,
+      'payload': {'name': 'Glucophage 500mg'},
+      'sent_at': '2026-10-25T10:00:00Z',
+      'created_at': '2026-10-25T10:00:00Z',
+    });
+    expect(alert.medicationName, 'Glucophage 500mg');
   });
 }

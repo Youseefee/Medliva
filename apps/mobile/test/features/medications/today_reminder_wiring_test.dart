@@ -7,6 +7,7 @@ import 'package:medliva/features/medications/data/medication_repository.dart';
 import 'package:medliva/features/medications/domain/models/medication.dart';
 import 'package:medliva/features/medications/presentation/screens/today_screen.dart';
 import 'package:medliva/l10n/app_localizations.dart';
+import 'package:medliva/main.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockMedicationRepository extends Mock implements MedicationRepository;
@@ -14,6 +15,8 @@ class MockMedicationRepository extends Mock implements MedicationRepository;
 /// Records every reminder call instead of touching the platform channel.
 class RecordingReminderService extends LocalReminderService {
   final List<List<TodayDoseModel>> rescheduled = [];
+  final List<bool> rescheduledPlaySound = [];
+  final List<bool> snoozedPlaySound = [];
   final List<String> cancelledScheduleIds = [];
 
   @override
@@ -21,8 +24,21 @@ class RecordingReminderService extends LocalReminderService {
     List<TodayDoseModel> doses, {
     DateTime? now,
     ReminderCopy copy = ReminderCopy.fallback,
+    bool playSound = true,
   }) async {
     rescheduled.add(doses);
+    rescheduledPlaySound.add(playSound);
+  }
+
+  @override
+  Future<void> scheduleSnoozeReminder({
+    required TodayDoseModel dose,
+    Duration delay = const Duration(minutes: 15),
+    DateTime? now,
+    ReminderCopy copy = ReminderCopy.fallback,
+    bool playSound = true,
+  }) async {
+    snoozedPlaySound.add(playSound);
   }
 
   @override
@@ -136,5 +152,37 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(reminderService.cancelledScheduleIds, ['sched-1']);
+  });
+
+  testWidgets('forwards reminderSoundProvider playSound preference (false & true)',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentPatientIdProvider.overrideWithValue('patient-1'),
+          medicationRepositoryProvider.overrideWithValue(repository),
+          localReminderServiceProvider.overrideWithValue(reminderService),
+          initialReminderSoundProvider.overrideWithValue(false),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: TodayScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(reminderService.rescheduledPlaySound, [false]);
+
+    // Toggling sound to true triggers TodayDosesNotifier rebuild & reschedules with sound enabled.
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(TodayScreen)),
+    );
+    container.read(reminderSoundProvider.notifier).setEnabled(enabled: true);
+    await tester.pumpAndSettle();
+
+    expect(reminderService.rescheduledPlaySound, [false, true]);
   });
 }

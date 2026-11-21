@@ -26,7 +26,11 @@ abstract class ImageStorageGateway {
   });
 }
 
-class SupabaseImageStorageGateway implements ImageStorageGateway {
+abstract class DeletableImageStorageGateway implements ImageStorageGateway {
+  Future<void> deleteObject({required String bucket, required String path});
+}
+
+class SupabaseImageStorageGateway implements DeletableImageStorageGateway {
   SupabaseImageStorageGateway(this._client);
 
   final SupabaseClient _client;
@@ -56,7 +60,12 @@ class SupabaseImageStorageGateway implements ImageStorageGateway {
     final lastSlash = path.lastIndexOf('/');
     final folder = lastSlash < 0 ? '' : path.substring(0, lastSlash);
     final fileName = lastSlash < 0 ? path : path.substring(lastSlash + 1);
-    final files = await _client.storage.from(bucket).list(path: folder);
+    final files = await _client.storage
+        .from(bucket)
+        .list(
+          path: folder,
+          searchOptions: SearchOptions(limit: 1, search: fileName),
+        );
     return files.any((file) => file.name == fileName);
   }
 
@@ -67,6 +76,14 @@ class SupabaseImageStorageGateway implements ImageStorageGateway {
     required int expiresInSeconds,
   }) {
     return _client.storage.from(bucket).createSignedUrl(path, expiresInSeconds);
+  }
+
+  @override
+  Future<void> deleteObject({
+    required String bucket,
+    required String path,
+  }) async {
+    await _client.storage.from(bucket).remove([path]);
   }
 }
 
@@ -80,6 +97,7 @@ class SupabaseImageRepository {
   static const prescriptionsBucket = 'prescriptions';
   static const pillImagesBucket = 'pill-images';
   static const int signedUrlLifetimeSeconds = 60 * 60;
+  static const int maxImageBytes = 10 * 1024 * 1024;
 
   final ImageStorageGateway _gateway;
   final String Function() _idGenerator;
@@ -91,6 +109,7 @@ class SupabaseImageRepository {
     String? mimeType,
   }) async {
     final patientFolder = _validatePathSegment(patientId, 'patientId');
+    _validateImageBytes(bytes);
     final path = '$patientFolder/${_idGenerator()}';
     await _gateway.uploadBinary(
       bucket: prescriptionsBucket,
@@ -108,11 +127,13 @@ class SupabaseImageRepository {
   }) async {
     final patientFolder = _validatePathSegment(patientId, 'patientId');
     final medicationFolder = _validatePathSegment(medicationId, 'medicationId');
+    final bytes = await file.readAsBytes();
+    _validateImageBytes(bytes);
     final path = '$patientFolder/$medicationFolder/image';
     await _gateway.uploadBinary(
       bucket: pillImagesBucket,
       path: path,
-      bytes: await file.readAsBytes(),
+      bytes: bytes,
       contentType: _contentType(file.name, file.mimeType),
       upsert: true,
     );
@@ -136,8 +157,41 @@ class SupabaseImageRepository {
     );
   }
 
+  Future<void> deletePillImage({
+    required String patientId,
+    required String medicationId,
+  }) async {
+    final patientFolder = _validatePathSegment(patientId, 'patientId');
+    final medicationFolder = _validatePathSegment(medicationId, 'medicationId');
+    final path = '$patientFolder/$medicationFolder/image';
+    final gateway = _gateway;
+    if (gateway is DeletableImageStorageGateway) {
+      await gateway.deleteObject(bucket: pillImagesBucket, path: path);
+    } else {
+      throw UnsupportedError('Image gateway does not support object deletion.');
+    }
+  }
+
+  static void _validateImageBytes(Uint8List bytes) {
+    if (bytes.isEmpty) {
+      throw ArgumentError.value(bytes.length, 'bytes', 'Image cannot be empty.');
+    }
+    if (bytes.length > maxImageBytes) {
+      throw ArgumentError.value(
+        bytes.length,
+        'bytes',
+        'Image exceeds maximum allowed size of $maxImageBytes bytes.',
+      );
+    }
+  }
+
   static String _validatePathSegment(String value, String field) {
-    if (value.isEmpty || value.contains('/') || value == '.' || value == '..') {
+    if (value.isEmpty ||
+        value.trim() != value ||
+        value.contains('/') ||
+        value.contains(r'\') ||
+        value == '.' ||
+        value == '..') {
       throw ArgumentError.value(value, field, 'Must be one path segment.');
     }
     return value;
@@ -172,14 +226,26 @@ abstract class MediaImagePicker {
 }
 
 class DeviceMediaImagePicker implements MediaImagePicker {
-  DeviceMediaImagePicker({ImagePicker? picker})
-    : _picker = picker ?? ImagePicker();
+  DeviceMediaImagePicker({
+    ImagePicker? picker,
+    this.maxWidth = 1600,
+    this.maxHeight = 1600,
+    this.imageQuality = 85,
+  }) : _picker = picker ?? ImagePicker();
 
   final ImagePicker _picker;
+  final double maxWidth;
+  final double maxHeight;
+  final int imageQuality;
 
   @override
   Future<XFile?> pickImage(ImageSource source) {
-    return _picker.pickImage(source: source);
+    return _picker.pickImage(
+      source: source,
+      maxWidth: maxWidth,
+      maxHeight: maxHeight,
+      imageQuality: imageQuality,
+    );
   }
 }
 

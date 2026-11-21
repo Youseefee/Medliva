@@ -46,11 +46,38 @@ class EmergencyRepository {
           'phone': input.phone,
           if (input.relationship != null) 'relationship': input.relationship,
           'is_primary': input.isPrimary,
+          'notify_call': true,
         })
         .select()
         .single();
 
     return EmergencyContactModel.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<EmergencyContactModel> updateContact(
+    String contactId,
+    EmergencyContactUpdateInput input,
+  ) async {
+    final row = await _supabaseClient
+        .from('emergency_contacts')
+        .update({
+          'name': input.name,
+          'phone': input.phone,
+          'relationship': input.relationship,
+          'is_primary': input.isPrimary,
+        })
+        .eq('id', contactId)
+        .select()
+        .single();
+
+    return EmergencyContactModel.fromJson(Map<String, dynamic>.from(row));
+  }
+
+  Future<void> deleteContact(String contactId) async {
+    await _supabaseClient
+        .from('emergency_contacts')
+        .delete()
+        .eq('id', contactId);
   }
 
   Future<SosResponseModel> triggerSos({

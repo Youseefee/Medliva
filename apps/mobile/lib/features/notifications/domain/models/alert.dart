@@ -40,7 +40,8 @@ class AlertModel {
 
   String? get note => payload?['note']?.toString();
 
-  String? get medicationName => payload?['medication_name']?.toString();
+  String? get medicationName =>
+      (payload?['medication_name'] ?? payload?['name'])?.toString();
 
   String? get timeOfDay => payload?['time_of_day']?.toString();
 

@@ -829,4 +829,311 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pillImageUploadFailed => 'Could not save the medication photo';
+
+  @override
+  String get appearanceTitle => 'Appearance';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get switchToLightTheme => 'Switch to Light Mode';
+
+  @override
+  String get switchToDarkTheme => 'Switch to Dark Mode';
+
+  @override
+  String get signUpTitle => 'Create Account';
+
+  @override
+  String get signUpSubtitle =>
+      'Enter your details to create a new Medliva account';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get authErrorInvalidCredentials => 'Invalid email or password.';
+
+  @override
+  String get authErrorEmailNotConfirmed =>
+      'Please confirm your email before signing in.';
+
+  @override
+  String get authErrorUserAlreadyExists =>
+      'Email is already registered. Please sign in instead.';
+
+  @override
+  String get authErrorWeakPassword => 'Password must be at least 6 characters.';
+
+  @override
+  String get authErrorNetwork =>
+      'Unable to connect. Please check your internet connection.';
+
+  @override
+  String get authErrorGeneric => 'Authentication failed. Please try again.';
+
+  @override
+  String get logoutConfirmTitle => 'Log Out';
+
+  @override
+  String get logoutConfirmMessage =>
+      'Are you sure you want to log out of your account?';
+
+  @override
+  String get greetingFallbackName => 'Friend';
+
+  @override
+  String offlineSyncPending(int count) {
+    return '$count pending change(s) waiting to sync';
+  }
+
+  @override
+  String get offlineSyncNow => 'Sync Now';
+
+  @override
+  String get offlineSyncSuccess => 'Synced successfully';
+
+  @override
+  String get reminderSoundEnabled => 'Clear tone enabled';
+
+  @override
+  String get reminderSoundMuted => 'Muted (silent)';
+
+  @override
+  String get notificationsLoadError =>
+      'Could not load notifications. Pull to refresh or retry.';
+
+  @override
+  String get retryAction => 'Retry';
+
+  @override
+  String get doseLoggedOffline => 'Saved offline — will sync when online';
+
+  @override
+  String get doseSnoozedSuccess => 'Dose snoozed for 15 minutes';
+
+  @override
+  String get medicationSavedSuccess => 'Medication saved successfully';
+
+  @override
+  String get scheduleAddedSuccess => 'Dose schedule added';
+
+  @override
+  String get scheduleDeletedSuccess => 'Dose schedule deleted';
+
+  @override
+  String get deleteScheduleConfirm =>
+      'Are you sure you want to delete this schedule?';
+
+  @override
+  String get invalidTimeFormat => 'Please enter a valid time in HH:MM format';
+
+  @override
+  String get invalidStockNumber => 'Please enter a valid non-negative number';
+
+  @override
+  String get medicationNoSchedule => 'No schedule set';
+
+  @override
+  String medicationFreqCount(int count) {
+    return '$count times daily';
+  }
+
+  @override
+  String medicationStockCount(int count) {
+    return 'Stock: $count pills';
+  }
+
+  @override
+  String get medicationExpiryLabel => 'Expiry Date';
+
+  @override
+  String get medicationAlertDaysLabel => 'Low-stock alert threshold (days)';
+
+  @override
+  String get expiredBadge => 'Expired';
+
+  @override
+  String get expiringSoonBadge => 'Expiring soon';
+
+  @override
+  String prescriptionAddedCount(int count) {
+    return '$count medication(s) added successfully';
+  }
+
+  @override
+  String get prescriptionSelectAtLeastOne =>
+      'Please select at least one medication';
+
+  @override
+  String get prescriptionAddManual => 'Add medication manually';
+
+  @override
+  String get vitalSystolicLabel => 'Systolic (upper)';
+
+  @override
+  String get vitalDiastolicLabel => 'Diastolic (lower)';
+
+  @override
+  String get vitalGlucoseLabel => 'Blood glucose (mg/dL)';
+
+  @override
+  String get vitalPulseLabel => 'Heart rate (bpm)';
+
+  @override
+  String get vitalInvalidValue => 'Please enter a valid reading value';
+
+  @override
+  String get vitalSystolicGreaterError =>
+      'Systolic must be greater than diastolic';
+
+  @override
+  String get mealContextFasting => 'Fasting';
+
+  @override
+  String get mealContextPostMeal => 'After meal';
+
+  @override
+  String get mealContextRandom => 'Random';
+
+  @override
+  String get vitalPulseTab => 'Pulse';
+
+  @override
+  String get inventoryEmptyTitle => 'No medications in inventory';
+
+  @override
+  String get inventoryEmptySubtitle =>
+      'Add your medications to track stock and refill alerts';
+
+  @override
+  String get inventoryRefillSheetTitle => 'Request Medication Refill';
+
+  @override
+  String get inventoryCopyMessage => 'Copy Order Message';
+
+  @override
+  String get inventoryCopiedMessage => 'Order message copied';
+
+  @override
+  String get inventoryUpdateStock => 'Update Stock';
+
+  @override
+  String get inventoryAddStockTitle => 'Add New Stock Quantity';
+
+  @override
+  String get inventoryMedicationsCategory => 'Available medications';
+
+  @override
+  String get pharmacyRefillGreeting =>
+      'Hello, I need a refill for the following medications:';
+
+  @override
+  String get copyCodeButton => 'Copy Code';
+
+  @override
+  String get codeCopiedMessage => 'Pairing code copied';
+
+  @override
+  String codeExpiresIn(int minutes) {
+    return 'Valid for $minutes min';
+  }
+
+  @override
+  String get pairingCodeInvalidLength =>
+      'Please enter the 6-digit pairing code';
+
+  @override
+  String get pairingErrorExpired =>
+      'This pairing code has expired. Please request a new one.';
+
+  @override
+  String get pairingErrorInvalid => 'Invalid pairing code';
+
+  @override
+  String get pairingErrorAlreadyLinked => 'This patient is already linked';
+
+  @override
+  String get pairingErrorGeneric => 'Could not link account. Please try again.';
+
+  @override
+  String get caregiverSelectedBadge => 'Selected';
+
+  @override
+  String caregiverMissedCount(int count) {
+    return '$count missed';
+  }
+
+  @override
+  String get contactEditTitle => 'Edit Contact';
+
+  @override
+  String get contactDeleteConfirm =>
+      'Are you sure you want to delete this contact?';
+
+  @override
+  String get contactSavedSuccess => 'Contact saved successfully';
+
+  @override
+  String get contactDeletedSuccess => 'Contact deleted';
+
+  @override
+  String get contactPrimaryLabel => 'Primary contact';
+
+  @override
+  String get contactNameRequired => 'Please enter contact name';
+
+  @override
+  String get contactPhoneRequired => 'Please enter a valid phone number';
+
+  @override
+  String get sosHoldHint => 'Hold for 2 seconds to trigger SOS';
+
+  @override
+  String get sosContactCallTitle => 'Call Contact';
+
+  @override
+  String get sosCopyPhone => 'Copy Number';
+
+  @override
+  String get sosPhoneCopied => 'Phone number copied';
+
+  @override
+  String reportRangeDays(int days) {
+    return 'Last $days days';
+  }
+
+  @override
+  String reportAdherenceSummary(int rate) {
+    return 'Adherence rate: $rate%';
+  }
+
+  @override
+  String get reportLoadError => 'Could not load report data';
+
+  @override
+  String get reportLinkCopied => 'Secure report link copied';
+
+  @override
+  String get reportNoPatientSelected =>
+      'Please select a patient first to generate a report';
+
+  @override
+  String get reportQrHint => 'Scan to open the temporary medical report';
+
+  @override
+  String get reportPreviewPrintButton => 'Preview & Print PDF';
+
+  @override
+  String get reportPdfError => 'Could not generate PDF';
 }

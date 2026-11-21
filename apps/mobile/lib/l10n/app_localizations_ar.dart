@@ -822,4 +822,305 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get pillImageUploadFailed => 'تعذر حفظ صورة الدواء';
+
+  @override
+  String get appearanceTitle => 'المظهر';
+
+  @override
+  String get themeLight => 'فاتح';
+
+  @override
+  String get themeDark => 'داكن';
+
+  @override
+  String get themeSystem => 'تلقائي';
+
+  @override
+  String get switchToLightTheme => 'تفعيل الوضع الفاتح';
+
+  @override
+  String get switchToDarkTheme => 'تفعيل الوضع الداكن';
+
+  @override
+  String get signUpTitle => 'إنشاء حساب جديد';
+
+  @override
+  String get signUpSubtitle => 'أدخل بياناتك لإنشاء حساب جديد على ميدليفا';
+
+  @override
+  String get showPassword => 'إظهار كلمة المرور';
+
+  @override
+  String get hidePassword => 'إخفاء كلمة المرور';
+
+  @override
+  String get authErrorInvalidCredentials =>
+      'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+
+  @override
+  String get authErrorEmailNotConfirmed =>
+      'يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إليك';
+
+  @override
+  String get authErrorUserAlreadyExists =>
+      'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك';
+
+  @override
+  String get authErrorWeakPassword => 'كلمة المرور يجب ألا تقل عن 6 أحرف';
+
+  @override
+  String get authErrorNetwork => 'تعذر الاتصال، يرجى التحقق من اتصال الإنترنت';
+
+  @override
+  String get authErrorGeneric =>
+      'حدث خطأ أثناء تسجيل الدخول، يرجى المحاولة مرة أخرى';
+
+  @override
+  String get logoutConfirmTitle => 'تسجيل الخروج';
+
+  @override
+  String get logoutConfirmMessage => 'هل أنت متأكد من تسجيل الخروج من حسابك؟';
+
+  @override
+  String get greetingFallbackName => 'عزيزنا';
+
+  @override
+  String offlineSyncPending(int count) {
+    return 'يوجد $count إجراء بانتظار المزامنة';
+  }
+
+  @override
+  String get offlineSyncNow => 'مزامنة الآن';
+
+  @override
+  String get offlineSyncSuccess => 'تمت المزامنة بنجاح';
+
+  @override
+  String get reminderSoundEnabled => 'نغمة واضحة مفعّلة';
+
+  @override
+  String get reminderSoundMuted => 'صامت (بدون صوت)';
+
+  @override
+  String get notificationsLoadError =>
+      'تعذر تحميل الإشعارات، اسحب للتحديث أو أعد المحاولة';
+
+  @override
+  String get retryAction => 'إعادة المحاولة';
+
+  @override
+  String get doseLoggedOffline =>
+      'تم الحفظ محلياً — ستتم المزامنة عند عودة الإنترنت';
+
+  @override
+  String get doseSnoozedSuccess => 'تم تأجيل الجرعة لمدة 15 دقيقة';
+
+  @override
+  String get medicationSavedSuccess => 'تم حفظ الدواء بنجاح';
+
+  @override
+  String get scheduleAddedSuccess => 'تمت إضافة موعد الجرعة';
+
+  @override
+  String get scheduleDeletedSuccess => 'تم حذف موعد الجرعة';
+
+  @override
+  String get deleteScheduleConfirm => 'هل أنت متأكد من حذف هذا الموعد؟';
+
+  @override
+  String get invalidTimeFormat => 'يرجى إدخال وقت صحيح بصيغة HH:MM';
+
+  @override
+  String get invalidStockNumber => 'يرجى إدخال رقم صحيح غير سالب';
+
+  @override
+  String get medicationNoSchedule => 'بدون مواعيد مجدولة';
+
+  @override
+  String medicationFreqCount(int count) {
+    return '$count مرات يومياً';
+  }
+
+  @override
+  String medicationStockCount(int count) {
+    return 'الرصيد: $count قرص';
+  }
+
+  @override
+  String get medicationExpiryLabel => 'تاريخ الانتهاء';
+
+  @override
+  String get medicationAlertDaysLabel => 'التنبيه قبل النفاد (أيام)';
+
+  @override
+  String get expiredBadge => 'منتهي الصلاحية';
+
+  @override
+  String get expiringSoonBadge => 'قارب على الانتهاء';
+
+  @override
+  String prescriptionAddedCount(int count) {
+    return 'تمت إضافة $count أدوية بنجاح';
+  }
+
+  @override
+  String get prescriptionSelectAtLeastOne => 'يرجى اختيار دواء واحد على الأقل';
+
+  @override
+  String get prescriptionAddManual => 'إضافة دواء يدوياً';
+
+  @override
+  String get vitalSystolicLabel => 'الضغط الانقباضي (الكبير)';
+
+  @override
+  String get vitalDiastolicLabel => 'الضغط الانبساطي (الصغير)';
+
+  @override
+  String get vitalGlucoseLabel => 'مستوى السكر (مجم/دسل)';
+
+  @override
+  String get vitalPulseLabel => 'معدل النبض (نبضة/دقيقة)';
+
+  @override
+  String get vitalInvalidValue => 'يرجى إدخال قيمة قياس صحيحة';
+
+  @override
+  String get vitalSystolicGreaterError =>
+      'يجب أن يكون الضغط الانقباضي أكبر من الانبساطي';
+
+  @override
+  String get mealContextFasting => 'صائم';
+
+  @override
+  String get mealContextPostMeal => 'بعد الأكل';
+
+  @override
+  String get mealContextRandom => 'عشوائي';
+
+  @override
+  String get vitalPulseTab => 'النبض';
+
+  @override
+  String get inventoryEmptyTitle => 'لا توجد أدوية في المخزون';
+
+  @override
+  String get inventoryEmptySubtitle =>
+      'أضف أدويتك لمتابعة المخزون وتنبيهات إعادة التعبئة';
+
+  @override
+  String get inventoryRefillSheetTitle => 'طلب إعادة تعبئة الدواء';
+
+  @override
+  String get inventoryCopyMessage => 'نسخ رسالة الطلب';
+
+  @override
+  String get inventoryCopiedMessage => 'تم نسخ رسالة الطلب';
+
+  @override
+  String get inventoryUpdateStock => 'تحديث المخزون';
+
+  @override
+  String get inventoryAddStockTitle => 'إضافة كمية جديدة للمخزون';
+
+  @override
+  String get inventoryMedicationsCategory => 'أدوية متاحة';
+
+  @override
+  String get pharmacyRefillGreeting =>
+      'مرحباً، أحتاج إعادة تعبئة الأدوية التالية:';
+
+  @override
+  String get copyCodeButton => 'نسخ الرمز';
+
+  @override
+  String get codeCopiedMessage => 'تم نسخ رمز الاقتران';
+
+  @override
+  String codeExpiresIn(int minutes) {
+    return 'صالح لمدة $minutes دقيقة';
+  }
+
+  @override
+  String get pairingCodeInvalidLength => 'يرجى إدخال الرمز المكون من 6 أرقام';
+
+  @override
+  String get pairingErrorExpired => 'انتهت صلاحية هذا الرمز، اطلب رمزاً جديداً';
+
+  @override
+  String get pairingErrorInvalid => 'رمز الاقتران غير صحيح';
+
+  @override
+  String get pairingErrorAlreadyLinked => 'هذا الحساب مرتبط بالفعل';
+
+  @override
+  String get pairingErrorGeneric => 'تعذر إتمام الربط، يرجى المحاولة مرة أخرى';
+
+  @override
+  String get caregiverSelectedBadge => 'المريض المختار';
+
+  @override
+  String caregiverMissedCount(int count) {
+    return '$count فائتة';
+  }
+
+  @override
+  String get contactEditTitle => 'تعديل جهة الاتصال';
+
+  @override
+  String get contactDeleteConfirm => 'هل أنت متأكد من حذف جهة الاتصال هذه؟';
+
+  @override
+  String get contactSavedSuccess => 'تم حفظ جهة الاتصال بنجاح';
+
+  @override
+  String get contactDeletedSuccess => 'تم حذف جهة الاتصال';
+
+  @override
+  String get contactPrimaryLabel => 'جهة اتصال رئيسية';
+
+  @override
+  String get contactNameRequired => 'يرجى إدخال اسم جهة الاتصال';
+
+  @override
+  String get contactPhoneRequired => 'يرجى إدخال رقم هاتف صحيح';
+
+  @override
+  String get sosHoldHint => 'استمر بالضغط لمدة 2 ثانية لتأكيد الاستغاثة';
+
+  @override
+  String get sosContactCallTitle => 'اتصل بجهة الاتصال';
+
+  @override
+  String get sosCopyPhone => 'نسخ الرقم';
+
+  @override
+  String get sosPhoneCopied => 'تم نسخ رقم الهاتف';
+
+  @override
+  String reportRangeDays(int days) {
+    return 'آخر $days يوم';
+  }
+
+  @override
+  String reportAdherenceSummary(int rate) {
+    return 'نسبة الالتزام: $rate%';
+  }
+
+  @override
+  String get reportLoadError => 'تعذر تحميل بيانات التقرير';
+
+  @override
+  String get reportLinkCopied => 'تم نسخ رابط التقرير الآمن';
+
+  @override
+  String get reportNoPatientSelected => 'يرجى اختيار مريض أولاً لإنشاء التقرير';
+
+  @override
+  String get reportQrHint => 'امسح الرمز لفتح التقرير الطبي المؤقت';
+
+  @override
+  String get reportPreviewPrintButton => 'معاينة وطباعة PDF';
+
+  @override
+  String get reportPdfError => 'تعذر إنشاء ملف PDF';
 }

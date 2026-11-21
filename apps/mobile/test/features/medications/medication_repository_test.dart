@@ -341,6 +341,90 @@ void main() {
       },
     );
 
+    test(
+      'getTodayDoses filters schedules by canonical Sat=bit0 days_mask and date bounds',
+      () async {
+        // 2026-10-24 is Saturday -> bit 0 (1).
+        final saturday = DateTime(2026, 10, 24, 9);
+        when(() => supabase.from('medications')).thenAnswer(
+          (_) => FakeQueryBuilder([
+            {
+              'id': 'med-1',
+              'name': 'Concor',
+              'schedules': [
+                {
+                  'id': 'sched-sat',
+                  'medication_id': 'med-1',
+                  'time_of_day': '08:00:00',
+                  'dose_amount': 1.0,
+                  'meal_relation': 'after_meal',
+                  'days_mask': 1, // Saturday only
+                  'is_active': true,
+                },
+                {
+                  'id': 'sched-sun',
+                  'medication_id': 'med-1',
+                  'time_of_day': '09:00:00',
+                  'dose_amount': 1.0,
+                  'meal_relation': 'after_meal',
+                  'days_mask': 2, // Sunday only
+                  'is_active': true,
+                },
+                {
+                  'id': 'sched-ended',
+                  'medication_id': 'med-1',
+                  'time_of_day': '10:00:00',
+                  'dose_amount': 1.0,
+                  'meal_relation': 'after_meal',
+                  'days_mask': 127,
+                  'end_date': '2026-10-20',
+                  'is_active': true,
+                },
+              ],
+            },
+          ]),
+        );
+        when(() => supabase.from('intake_logs'))
+            .thenAnswer((_) => FakeQueryBuilder(const <Map<String, dynamic>>[]));
+
+        final doses = await repository.getTodayDoses(
+          'patient-1',
+          now: saturday,
+        );
+
+        expect(doses, hasLength(1));
+        expect(doses.first.scheduleId, 'sched-sat');
+      },
+    );
+
+    test('updateSchedule and deleteSchedule work through PostgREST', () async {
+      when(() => supabase.from('schedules')).thenAnswer(
+        (_) => FakeQueryBuilder({
+          'id': 'sched-1',
+          'medication_id': 'med-1',
+          'time_of_day': '21:15:00',
+          'dose_amount': 1.0,
+          'meal_relation': 'with_meal',
+          'days_mask': 5,
+          'is_active': true,
+        }),
+      );
+
+      final updated = await repository.updateSchedule(
+        'sched-1',
+        const ScheduleUpdateInput(
+          timeOfDay: '21:15',
+          mealRelation: 'with_meal',
+          daysMask: 5,
+        ),
+      );
+      expect(updated.timeOfDay, '21:15');
+      expect(updated.mealRelation, 'with_meal');
+
+      await repository.deleteSchedule('sched-1');
+      verify(() => supabase.from('schedules')).called(2);
+    });
+
     test('logAdherence uses an atomic idempotent database function', () async {
       Map<String, dynamic>? rpcParams;
       when(

@@ -64,7 +64,15 @@ class MedicationRepository {
               .eq('id', medicationId)
               .select('*, schedules(*)')
               .single();
-    return MedicationModel.fromJson(Map<String, dynamic>.from(response));
+    final row = Map<String, dynamic>.from(response);
+    final schedules = row['schedules'];
+    if (schedules is List) {
+      row['schedules'] = schedules.where((schedule) {
+        final s = Map<String, dynamic>.from(schedule as Map);
+        return s['is_active'] as bool? ?? true;
+      }).toList();
+    }
+    return MedicationModel.fromJson(row);
   }
 
   Future<void> deleteMedication(String medicationId) async {
@@ -83,7 +91,9 @@ class MedicationRepository {
     final response = await _client
         .from('schedules')
         .select()
-        .eq('medication_id', medicationId);
+        .eq('medication_id', medicationId)
+        .eq('is_active', true)
+        .order('time_of_day', ascending: true);
     return (response as List<dynamic>)
         .map(
           (item) =>
@@ -108,7 +118,34 @@ class MedicationRepository {
     return ScheduleModel.fromJson(Map<String, dynamic>.from(response));
   }
 
-  Future<List<TodayDoseModel>> getTodayDoses(String patientId) async {
+  Future<ScheduleModel> updateSchedule(
+    String scheduleId,
+    ScheduleUpdateInput input,
+  ) async {
+    final updates = input.toJson();
+    final query = _client.from('schedules');
+    final response = updates.isEmpty
+        ? await query.select().eq('id', scheduleId).single()
+        : await query.update(updates).eq('id', scheduleId).select().single();
+    return ScheduleModel.fromJson(Map<String, dynamic>.from(response));
+  }
+
+  Future<void> deleteSchedule(String scheduleId) async {
+    final response = await _client
+        .from('schedules')
+        .update({'is_active': false})
+        .eq('id', scheduleId)
+        .select('id')
+        .maybeSingle();
+    if (response == null) {
+      throw StateError('The schedule does not exist or is not accessible.');
+    }
+  }
+
+  Future<List<TodayDoseModel>> getTodayDoses(
+    String patientId, {
+    DateTime? now,
+  }) async {
     final medicationsResponse = await _client
         .from('medications')
         .select('id, name, is_active, schedules(*)')
@@ -119,15 +156,25 @@ class MedicationRepository {
         .toList();
     if (medications.isEmpty) return const [];
 
-    final now = DateTime.now().toUtc();
-    final startOfToday = DateTime.utc(now.year, now.month, now.day);
-    final endOfToday = startOfToday.add(const Duration(days: 1));
+    final localNow = (now ?? DateTime.now()).toLocal();
+    final startOfToday = DateTime(
+      localNow.year,
+      localNow.month,
+      localNow.day,
+    ).toUtc();
+    final endOfToday = DateTime(
+      localNow.year,
+      localNow.month,
+      localNow.day + 1,
+    ).toUtc();
+
     final logsResponse = await _client
         .from('intake_logs')
         .select()
         .eq('patient_id', patientId)
         .gte('scheduled_time', startOfToday.toIso8601String())
-        .lt('scheduled_time', endOfToday.toIso8601String());
+        .lt('scheduled_time', endOfToday.toIso8601String())
+        .order('created_at', ascending: true);
     final logs = (logsResponse as List<dynamic>)
         .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
@@ -145,22 +192,25 @@ class MedicationRepository {
       final schedules = medication['schedules'] as List<dynamic>? ?? const [];
 
       for (final item in schedules) {
-        final schedule = Map<String, dynamic>.from(item as Map);
-        if (!(schedule['is_active'] as bool? ?? true)) continue;
+        final scheduleMap = Map<String, dynamic>.from(item as Map);
+        final scheduleModel = ScheduleModel.fromJson({
+          'medication_id': medicationId,
+          ...scheduleMap,
+        });
+        if (!scheduleModel.isScheduledOn(localNow)) continue;
 
-        final scheduleId = schedule['id'].toString();
+        final scheduleId = scheduleModel.id;
         final log = logsBySchedule[scheduleId];
-        final rawTime = schedule['time_of_day'] as String;
         final actualTime = log?['actual_time'];
         doses.add(
           TodayDoseModel(
             scheduleId: scheduleId,
             medicationId: medicationId,
             medicationName: medicationName,
-            timeOfDay: rawTime.length >= 5 ? rawTime.substring(0, 5) : rawTime,
-            doseAmount: (schedule['dose_amount'] as num?)?.toDouble() ?? 1,
-            mealRelation: schedule['meal_relation'] as String? ?? 'after_meal',
-            instructionsAr: schedule['instructions_ar'] as String?,
+            timeOfDay: scheduleModel.timeOfDay,
+            doseAmount: scheduleModel.doseAmount,
+            mealRelation: scheduleModel.mealRelation,
+            instructionsAr: scheduleModel.instructionsAr,
             status: log?['status'] as String? ?? 'pending',
             intakeLogId: log?['id']?.toString(),
             actualTime: actualTime == null

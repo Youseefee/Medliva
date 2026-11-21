@@ -1,4 +1,5 @@
 import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -33,13 +34,16 @@ final alertsNotifierProvider =
     AsyncNotifierProvider<AlertsNotifier, List<AlertModel>>(AlertsNotifier.new);
 
 /// The caregivers monitoring the current patient.
-final patientCaregiversProvider =
-    FutureProvider<List<LinkedCaregiverModel>>((ref) {
+final patientCaregiversProvider = FutureProvider<List<LinkedCaregiverModel>>((
+  ref,
+) {
   final patientId = ref.watch(currentPatientIdProvider);
   if (patientId == null || patientId.isEmpty) {
     return Future.value(const []);
   }
-  return ref.watch(caregiverRepositoryProvider).listPatientCaregivers(patientId);
+  return ref
+      .watch(caregiverRepositoryProvider)
+      .listPatientCaregivers(patientId);
 });
 
 /// A single row of the notification centre.
@@ -54,6 +58,8 @@ class NotificationItem {
     required this.timeLabel,
     required this.body,
     required this.subBody,
+    required this.route,
+    this.extra,
   });
 
   final String id;
@@ -65,6 +71,8 @@ class NotificationItem {
   final String timeLabel;
   final String body;
   final String subBody;
+  final String route;
+  final Object? extra;
 }
 
 class NotificationsScreen extends ConsumerStatefulWidget {
@@ -78,10 +86,30 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   String _selectedFilter = 'all';
 
+  Future<void> _refresh() async {
+    ref
+      ..invalidate(alertsNotifierProvider)
+      ..invalidate(patientCaregiversProvider)
+      ..invalidate(todayDosesNotifierProvider)
+      ..invalidate(inventoryForecastProvider)
+      ..invalidate(vitalsNotifierProvider);
+    await Future.wait<void>([
+      ref.read(alertsNotifierProvider.future).then((_) {}, onError: (_) {}),
+      ref.read(patientCaregiversProvider.future).then((_) {}, onError: (_) {}),
+      ref.read(todayDosesNotifierProvider.future).then((_) {}, onError: (_) {}),
+      ref.read(inventoryForecastProvider.future).then((_) {}, onError: (_) {}),
+      ref.read(vitalsNotifierProvider.future).then((_) {}, onError: (_) {}),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final isEn = Localizations.localeOf(context).languageCode == 'en';
+    final isCaregiver =
+        ref.watch(authNotifierProvider).value?.isCaregiver ?? false;
 
     final alertsAsync = ref.watch(alertsNotifierProvider);
     final caregiversAsync = ref.watch(patientCaregiversProvider);
@@ -89,14 +117,24 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final inventoryAsync = ref.watch(inventoryForecastProvider);
     final vitalsAsync = ref.watch(vitalsNotifierProvider);
 
+    final isInitialLoading =
+        alertsAsync.isLoading &&
+        !alertsAsync.hasValue &&
+        caregiversAsync.isLoading &&
+        !caregiversAsync.hasValue;
+
     final items = _buildItems(
       l10n: l10n,
+      isEn: isEn,
+      isCaregiver: isCaregiver,
       alerts: alertsAsync.value ?? const [],
       caregivers: caregiversAsync.value ?? const [],
       doses: dosesAsync.value ?? const [],
       inventory: inventoryAsync.value ?? const [],
       vitals: vitalsAsync.value ?? const [],
     );
+
+    final hasError = alertsAsync.hasError && items.isEmpty;
 
     final filtered = _selectedFilter == 'all'
         ? items
@@ -111,16 +149,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.favorite_rounded,
-                  color: Color(0xFF00796B),
+                  color: theme.colorScheme.primary,
                   size: 24,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   l10n.appName,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF00796B),
+                    color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -148,8 +186,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   ])
                     Padding(
                       padding: const EdgeInsetsDirectional.only(end: 8),
-                      child: SizedBox(
-                        height: 48,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 48),
                         child: ChoiceChip(
                           key: ValueKey('notif_filter_${tab.id}'),
                           label: Text(
@@ -158,13 +196,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: _selectedFilter == tab.id
-                                  ? Colors.white
-                                  : Colors.black87,
+                                  ? theme.colorScheme.onPrimary
+                                  : theme.colorScheme.onSurface,
                             ),
                           ),
                           selected: _selectedFilter == tab.id,
-                          selectedColor: const Color(0xFF00695C),
-                          backgroundColor: Colors.grey.shade200,
+                          selectedColor: theme.colorScheme.primary,
+                          backgroundColor:
+                              theme.colorScheme.surfaceContainerHighest,
                           onSelected: (_) =>
                               setState(() => _selectedFilter = tab.id),
                         ),
@@ -174,97 +213,189 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ),
             ),
             Expanded(
-              child: filtered.isEmpty
-                  ? _buildEmptyState(l10n)
-                  : ListView.separated(
-                      padding: const EdgeInsetsDirectional.all(16),
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 14),
-                      itemBuilder: (context, index) {
-                        final item = filtered[index];
-                        return InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () {
-                            switch (item.category) {
-                              case 'medications':
-                                unawaited(context.push('/medications'));
-                              case 'alerts':
-                                unawaited(context.push('/vitals'));
-                              case 'caregivers':
-                                unawaited(context.push('/caregiver/pairing-code'));
-                              default:
-                                unawaited(context.push('/inventory'));
-                            }
-                          },
-                          child: Container(
-                            key: ValueKey('notif_card_${item.id}'),
-                            padding: const EdgeInsetsDirectional.all(18),
-                            decoration: BoxDecoration(
-                              color: item.bgColor,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 26,
-                                  backgroundColor: item.iconColor,
-                                  child: Icon(
-                                    item.icon,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              item.title,
-                                              style: theme.textTheme.titleMedium
-                                                  ?.copyWith(
-                                                color: item.iconColor,
-                                                fontWeight: FontWeight.bold,
+              child: isInitialLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : hasError
+                      ? _buildErrorState(l10n)
+                      : RefreshIndicator(
+                          onRefresh: _refresh,
+                          child: filtered.isEmpty
+                              ? ListView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  children: [
+                                    const SizedBox(height: 80),
+                                    _buildEmptyState(l10n),
+                                  ],
+                                )
+                              : ListView.separated(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsetsDirectional.all(16),
+                                  itemCount: filtered.length,
+                                  separatorBuilder: (_, _) =>
+                                      const SizedBox(height: 14),
+                                  itemBuilder: (context, index) {
+                                    final item = filtered[index];
+                                    final cardBg = isDark
+                                        ? Color.alphaBlend(
+                                            item.iconColor.withValues(
+                                              alpha: 0.18,
+                                            ),
+                                            theme
+                                                .colorScheme.surfaceContainerLow,
+                                          )
+                                        : item.bgColor;
+                                    final cardBorder = isDark
+                                        ? Border.all(
+                                            color: item.iconColor.withValues(
+                                              alpha: 0.35,
+                                            ),
+                                          )
+                                        : null;
+                                    final titleColor = isDark
+                                        ? (Color.lerp(
+                                              item.iconColor,
+                                              Colors.white,
+                                              0.35,
+                                            ) ??
+                                            item.iconColor)
+                                        : item.iconColor;
+
+                                    return InkWell(
+                                      borderRadius: BorderRadius.circular(20),
+                                      onTap: () {
+                                        if (GoRouter.maybeOf(context) != null) {
+                                          unawaited(
+                                            context.push(
+                                              item.route,
+                                              extra: item.extra,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: Container(
+                                        key: ValueKey('notif_card_${item.id}'),
+                                        padding:
+                                            const EdgeInsetsDirectional.all(18),
+                                        decoration: BoxDecoration(
+                                          color: cardBg,
+                                          border: cardBorder,
+                                          borderRadius:
+                                              BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 26,
+                                              backgroundColor: item.iconColor,
+                                              child: Icon(
+                                                item.icon,
+                                                color: Colors.white,
+                                                size: 28,
                                               ),
                                             ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            item.timeLabel,
-                                            style: theme.textTheme.bodySmall,
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        item.body,
-                                        style: theme.textTheme.titleMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
+                                            const SizedBox(width: 14),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Text(
+                                                          item.title,
+                                                          style: theme.textTheme
+                                                              .titleMedium
+                                                              ?.copyWith(
+                                                            color: titleColor,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        item.timeLabel,
+                                                        style: theme
+                                                            .textTheme.bodySmall,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    item.body,
+                                                    style: theme
+                                                        .textTheme.titleMedium
+                                                        ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  if (item
+                                                      .subBody.isNotEmpty) ...[
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      item.subBody,
+                                                      style: theme
+                                                          .textTheme.bodyMedium,
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
                                             ),
+                                            const SizedBox(width: 8),
+                                            Icon(
+                                              Icons.arrow_forward_ios_rounded,
+                                              size: 18,
+                                              color: theme
+                                                  .colorScheme.onSurfaceVariant,
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        item.subBody,
-                                        style: theme.textTheme.bodyMedium,
-                                      ),
-                                    ],
-                                  ),
+                                    );
+                                  },
                                 ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.chevron_right_rounded, size: 24),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(AppLocalizations l10n) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsetsDirectional.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 56,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.notificationsLoadError,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              key: const ValueKey('notif_retry_button'),
+              onPressed: _refresh,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(l10n.retryAction),
             ),
           ],
         ),
@@ -273,6 +404,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildEmptyState(AppLocalizations l10n) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsetsDirectional.all(24),
@@ -282,18 +414,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             Icon(
               Icons.notifications_none_rounded,
               size: 56,
-              color: Colors.grey.shade500,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 12),
             Text(
               l10n.notifEmptyTitle,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             Text(
               l10n.notifEmptySub,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
           ],
@@ -302,10 +434,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
-  /// Builds the notification list: real API alerts first, then the cards
-  /// derived from the live medication, inventory and vitals data.
+  /// Builds the notification list: real API alerts first, then deduplicated
+  /// cards derived from live medication, inventory and abnormal vitals data.
   List<NotificationItem> _buildItems({
     required AppLocalizations l10n,
+    required bool isEn,
+    required bool isCaregiver,
     required List<AlertModel> alerts,
     required List<LinkedCaregiverModel> caregivers,
     required List<TodayDoseModel> doses,
@@ -315,6 +449,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final items = <NotificationItem>[
       for (final alert in alerts) _alertItem(alert, l10n),
     ];
+
+    final existingLowStockNames = alerts
+        .where((a) => a.type == 'low_stock')
+        .map((a) => a.medicationName?.trim().toLowerCase())
+        .whereType<String>()
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    final hasCriticalVitalAlert =
+        alerts.any((a) => a.type == 'critical_vital');
 
     final nextDose = doses
         .where((d) => d.status == 'pending' || d.status == 'snoozed')
@@ -331,12 +474,18 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           timeLabel: nextDose.timeOfDay,
           body: l10n.notifDoseBody(nextDose.medicationName),
           subBody: l10n.notifDoseSub(nextDose.timeOfDay),
+          route: '/medications/reminder',
+          extra: nextDose,
         ),
       );
     }
 
-    final lowStockItem = inventory.where((i) => i.isUnderSevenDays).firstOrNull;
-    if (lowStockItem != null) {
+    final lowStockItems = inventory.where(
+      (i) =>
+          i.isUnderSevenDays &&
+          !existingLowStockNames.contains(i.name.trim().toLowerCase()),
+    );
+    for (final lowStockItem in lowStockItems) {
       items.add(
         NotificationItem(
           id: 'low_stock_${lowStockItem.medicationId}',
@@ -348,38 +497,43 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           timeLabel: l10n.daysLeftLabel(lowStockItem.daysRemaining),
           body: l10n.notifLowStockBody(lowStockItem.name),
           subBody: l10n.notifLowStockSub(lowStockItem.daysRemaining),
+          route: '/inventory',
         ),
       );
     }
 
-    final abnormalVital =
-        vitals.where((v) => v.band != 'normal').firstOrNull ??
-        (vitals.isNotEmpty ? vitals.first : null);
-    if (abnormalVital != null) {
-      final value = abnormalVital.valueSecondary != null
-          ? '${abnormalVital.valuePrimary.toInt()}/'
-              '${abnormalVital.valueSecondary!.toInt()}'
-          : abnormalVital.valuePrimary.toInt().toString();
-      items.add(
-        NotificationItem(
-          id: 'vital_${abnormalVital.id}',
-          category: 'alerts',
-          bgColor: const Color(0xFFFFEBEE),
-          iconColor: const Color(0xFFE53935),
-          icon: Icons.favorite_rounded,
-          title: l10n.notifHighVitalTitle,
-          timeLabel: _relativeTime(l10n, abnormalVital.recordedAt),
-          body: l10n.notifHighVitalBody(value),
-          subBody: l10n.alertCaregiversNotified,
-        ),
-      );
+    // Only surface genuinely abnormal vitals — never raise a red alarm for normal readings.
+    if (!hasCriticalVitalAlert) {
+      final abnormalVital =
+          vitals.where((v) => v.band != 'normal').firstOrNull;
+      if (abnormalVital != null) {
+        final value = abnormalVital.valueSecondary != null
+            ? '${abnormalVital.valuePrimary.toInt()}/'
+                '${abnormalVital.valueSecondary!.toInt()}'
+            : abnormalVital.valuePrimary.toInt().toString();
+        items.add(
+          NotificationItem(
+            id: 'vital_${abnormalVital.id}',
+            category: 'alerts',
+            bgColor: const Color(0xFFFFEBEE),
+            iconColor: const Color(0xFFE53935),
+            icon: Icons.favorite_rounded,
+            title: l10n.notifHighVitalTitle,
+            timeLabel: _relativeTime(l10n, abnormalVital.recordedAt),
+            body: l10n.notifHighVitalBody(value),
+            subBody: l10n.alertCaregiversNotified,
+            route: '/vitals',
+          ),
+        );
+      }
     }
 
     if (caregivers.isNotEmpty) {
+      final separator = isEn ? ', ' : '، ';
       final names = caregivers
           .map((c) => c.displayName)
           .where((name) => name.isNotEmpty)
-          .join('، ');
+          .join(separator);
       items.add(
         NotificationItem(
           id: 'caregivers',
@@ -393,6 +547,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             names.isEmpty ? l10n.notifCaregiverMonitorSub : names,
           ),
           subBody: l10n.notifCaregiverMonitorSub,
+          route: isCaregiver ? '/caregiver/pair' : '/caregiver/pairing-code',
         ),
       );
     }
@@ -418,6 +573,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ? l10n.alertSosNote(note)
               : l10n.alertSosBody,
           subBody: l10n.alertCaregiversNotified,
+          route: '/emergency/sos',
         );
       case 'critical_vital':
         final primary = alert.vitalValuePrimary;
@@ -437,6 +593,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           timeLabel: timeLabel,
           body: l10n.alertVitalReading(value),
           subBody: l10n.alertCaregiversNotified,
+          route: '/vitals',
         );
       case 'low_stock':
         return NotificationItem(
@@ -449,6 +606,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           timeLabel: timeLabel,
           body: l10n.alertLowStockBody(alert.medicationName ?? ''),
           subBody: l10n.alertCaregiversNotified,
+          route: '/inventory',
         );
       case 'missed_dose':
         return NotificationItem(
@@ -461,6 +619,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           timeLabel: timeLabel,
           body: l10n.alertMissedDoseBody(alert.medicationName ?? ''),
           subBody: alert.timeOfDay ?? '',
+          route: '/medications',
         );
       case 'expiry':
         return NotificationItem(
@@ -473,6 +632,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           timeLabel: timeLabel,
           body: l10n.alertExpiryBody(alert.medicationName ?? ''),
           subBody: '',
+          route: '/inventory',
         );
       default:
         return NotificationItem(
@@ -485,6 +645,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           timeLabel: timeLabel,
           body: l10n.alertGenericBody,
           subBody: '',
+          route: '/notifications',
         );
     }
   }

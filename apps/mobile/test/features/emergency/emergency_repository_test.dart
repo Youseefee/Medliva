@@ -145,6 +145,48 @@ void main() {
     );
     expect(contact.id, 'contact-2');
     expect(contact.patientId, 'patient-1');
+    verify(
+      () => query.insert({
+        'patient_id': 'patient-1',
+        'name': 'كريم',
+        'phone': '01066666666',
+        'relationship': 'ابن',
+        'is_primary': false,
+        'notify_call': true,
+      }),
+    ).called(1);
+  });
+
+  test('updates and deletes an emergency contact through PostgREST', () async {
+    when(() => supabase.from('emergency_contacts')).thenAnswer((_) => query);
+    when(() => query.update(any())).thenAnswer(
+      (_) => FakePostgrestFilterBuilder(
+        row: {
+          'id': 'contact-2',
+          'patient_id': 'patient-1',
+          'name': 'كريم محدث',
+          'phone': '01077777777',
+          'relationship': 'ابن',
+          'is_primary': true,
+        },
+      ),
+    );
+    when(() => query.delete()).thenAnswer((_) => FakePostgrestFilterBuilder());
+
+    final updated = await repository.updateContact(
+      'contact-2',
+      const EmergencyContactUpdateInput(
+        name: 'كريم محدث',
+        phone: '01077777777',
+        relationship: 'ابن',
+        isPrimary: true,
+      ),
+    );
+    expect(updated.name, 'كريم محدث');
+    expect(updated.isPrimary, isTrue);
+
+    await repository.deleteContact('contact-2');
+    verify(() => query.delete()).called(1);
   });
 
   test('triggers SOS through the restricted database function', () async {

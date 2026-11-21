@@ -180,4 +180,20 @@ void main() {
     expect(input.scheduleId, 'sched-1');
     expect(input.status, 'taken');
   });
+
+  testWidgets('tapping the skip button logs the dose as skipped and pops', (
+    tester,
+  ) async {
+    await openReminder(tester);
+
+    await tester.tap(find.byKey(const ValueKey('reminder_skip_btn')));
+    await tester.pumpAndSettle();
+
+    final captured = verify(() => repository.logAdherence(captureAny()))
+        .captured;
+    final input = captured.single as IntakeLogCreateInput;
+    expect(input.scheduleId, 'sched-1');
+    expect(input.status, 'skipped');
+    expect(find.byKey(const ValueKey('open_reminder')), findsOneWidget);
+  });
 }

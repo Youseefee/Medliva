@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/inventory/domain/models/inventory.dart';
+import 'package:medliva/features/medications/domain/models/medication.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class InventoryRepository {
@@ -14,7 +15,7 @@ class InventoryRepository {
         .from('medications')
         .select(
           'id, name, stock_count, alert_threshold_days, expiry_date, '
-          'schedules(dose_amount, is_active)',
+          'schedules(dose_amount, days_mask, is_active)',
         )
         .eq('patient_id', patientId)
         .eq('is_active', true);
@@ -28,8 +29,12 @@ class InventoryRepository {
           .where((schedule) => schedule['is_active'] as bool? ?? true);
       final dailyDose = activeSchedules.fold<double>(
         0,
-        (total, schedule) =>
-            total + ((schedule['dose_amount'] as num?)?.toDouble() ?? 1),
+        (total, schedule) {
+          final doseAmount = (schedule['dose_amount'] as num?)?.toDouble() ?? 1;
+          final daysMask = (schedule['days_mask'] as num?)?.toInt() ?? 127;
+          final daysPerWeek = countDaysInMask(daysMask);
+          return total + (doseAmount * (daysPerWeek / 7.0));
+        },
       );
       final stockCount = (med['stock_count'] as num?)?.toInt() ?? 0;
       final daysRemaining = dailyDose > 0
@@ -54,7 +59,9 @@ class InventoryRepository {
         name: med['name']?.toString() ?? '',
         stockCount: stockCount,
         daysRemaining: daysRemaining,
-        isLowStock: daysRemaining <= threshold,
+        isLowStock: dailyDose > 0
+            ? daysRemaining <= threshold
+            : stockCount <= threshold,
         isExpired: isExpired,
         isExpiringSoon: isExpiringSoon,
         expiryDate: normalizedExpiry,
@@ -66,10 +73,12 @@ class InventoryRepository {
     required String patientId,
     required String medicationName,
     int quantity = 1,
+    String locale = 'ar',
   }) async {
     if (quantity < 1) throw ArgumentError.value(quantity, 'quantity');
 
-    var patientName = 'المريض';
+    final isArabic = locale == 'ar';
+    var patientName = isArabic ? 'المريض' : 'Patient';
     String? address;
     final user = await _supabaseClient
         .from('users')
@@ -82,15 +91,23 @@ class InventoryRepository {
       address = user['address'] as String?;
     }
 
-    final lines = [
-      'السلام عليكم، أود طلب نواقص أدوية للمريض: $patientName',
-      'الأدوية المطلوبة:',
-      '• $medicationName: $quantity عبوة',
-    ];
-    if (address != null && address.trim().isNotEmpty) {
-      lines.add('العنوان: ${address.trim()}');
-    }
-    lines.add('شكراً جزيلاً.');
+    final lines = isArabic
+        ? [
+            'السلام عليكم، أود طلب نواقص أدوية للمريض: $patientName',
+            'الأدوية المطلوبة:',
+            '• $medicationName: $quantity عبوة',
+            if (address != null && address.trim().isNotEmpty)
+              'العنوان: ${address.trim()}',
+            'شكراً جزيلاً.',
+          ]
+        : [
+            'Hello, I would like to request a medication refill for: $patientName',
+            'Requested medications:',
+            '• $medicationName: $quantity pack(s)',
+            if (address != null && address.trim().isNotEmpty)
+              'Address: ${address.trim()}',
+            'Thank you.',
+          ];
 
     final messageText = lines.join('\n');
     return RefillOrderResult(

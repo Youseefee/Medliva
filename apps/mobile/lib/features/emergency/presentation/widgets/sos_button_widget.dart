@@ -62,6 +62,18 @@ class SosButtonWidget extends ConsumerStatefulWidget {
 class _SosButtonWidgetState extends ConsumerState<SosButtonWidget> {
   bool _isSending = false;
 
+  void _showHoldHint() {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(l10n.sosHoldHint),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+  }
+
   Future<void> _openConfirmAndSend() async {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
@@ -70,26 +82,22 @@ class _SosButtonWidgetState extends ConsumerState<SosButtonWidget> {
         title: Text(l10n.sosConfirmTitle),
         content: Text(l10n.sosConfirmBody),
         actions: [
-          SizedBox(
-            height: 48,
-            child: TextButton(
-              key: const ValueKey('sos_cancel_btn'),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.cancelButton),
-            ),
+          TextButton(
+            key: const ValueKey('sos_cancel_btn'),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancelButton),
           ),
-          SizedBox(
-            height: 48,
-            child: ElevatedButton.icon(
-              key: const ValueKey('sos_confirm_send_btn'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade800,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              icon: const Icon(Icons.sos_rounded),
-              label: Text(l10n.sosConfirmSendButton),
+          ElevatedButton.icon(
+            key: const ValueKey('sos_confirm_send_btn'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade800,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(0, 48),
             ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.sos_rounded),
+            label: Text(l10n.sosConfirmSendButton),
           ),
         ],
       ),
@@ -104,17 +112,24 @@ class _SosButtonWidgetState extends ConsumerState<SosButtonWidget> {
       final repo = ref.read(emergencyRepositoryProvider);
       await repo.triggerSos(lat: coords?.lat, lng: coords?.lng);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.sosSentMessage)),
-      );
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(l10n.sosSentMessage),
+            backgroundColor: Colors.green.shade700,
+          ),
+        );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
     } finally {
       if (mounted) {
         setState(() => _isSending = false);
@@ -133,25 +148,44 @@ class _SosButtonWidgetState extends ConsumerState<SosButtonWidget> {
       onLongPress: _isSending ? null : _openConfirmAndSend,
       child: GestureDetector(
         key: const ValueKey('sos_trigger_btn'),
+        onTap: _isSending ? null : _showHoldHint,
         onLongPress: _isSending ? null : _openConfirmAndSend,
         child: Container(
-          height: 60,
-          padding: const EdgeInsetsDirectional.symmetric(horizontal: 20),
+          constraints: const BoxConstraints(minHeight: 60),
+          padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 20,
+            vertical: 12,
+          ),
           decoration: BoxDecoration(
-            color: Colors.red.shade800,
+            color: _isSending
+                ? Colors.red.shade800.withValues(alpha: 0.65)
+                : Colors.red.shade800,
             borderRadius: BorderRadius.circular(18),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.sos_rounded, color: Colors.white, size: 32),
+              if (_isSending)
+                const SizedBox(
+                  width: 26,
+                  height: 26,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              else
+                const Icon(Icons.sos_rounded, color: Colors.white, size: 32),
               const SizedBox(width: 12),
-              Text(
-                l10n.sosButtonLabel,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              Flexible(
+                child: Text(
+                  l10n.sosButtonLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],

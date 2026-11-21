@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:medliva/core/storage/preferences_storage.dart';
 import 'package:medliva/core/theme/app_theme.dart';
+import 'package:medliva/main.dart';
 
 void main() {
   group('AppTheme font configuration', () {
@@ -70,6 +73,61 @@ void main() {
       );
 
       expect(find.text('ميدليفا للأدوية - Medliva'), findsOneWidget);
+    });
+
+    test('elderly font floor and focusedErrorBorder configured on both themes',
+        () {
+      for (final theme in [AppTheme.lightTheme, AppTheme.darkTheme]) {
+        expect(
+          theme.dialogTheme.contentTextStyle?.fontSize,
+          greaterThanOrEqualTo(18),
+        );
+        expect(
+          theme.snackBarTheme.contentTextStyle?.fontSize,
+          greaterThanOrEqualTo(18),
+        );
+        expect(theme.inputDecorationTheme.focusedErrorBorder, isNotNull);
+        expect(theme.outlinedButtonTheme.style?.foregroundColor, isNotNull);
+      }
+    });
+  });
+
+  group('Persisted UI preferences', () {
+    test('ThemeModeNotifier.toggle resolves ThemeMode.system dark brightness',
+        () async {
+      final prefs = InMemoryPreferencesStorage();
+      final container = ProviderContainer(
+        overrides: [
+          preferencesStorageProvider.overrideWithValue(prefs),
+          initialThemeModeProvider.overrideWithValue(ThemeMode.system),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(themeModeProvider), ThemeMode.system);
+      container.read(themeModeProvider.notifier).toggle(isCurrentlyDark: true);
+      expect(container.read(themeModeProvider), ThemeMode.light);
+      expect(prefs.themeMode, ThemeMode.light);
+
+      container.read(themeModeProvider.notifier).toggle(isCurrentlyDark: false);
+      expect(container.read(themeModeProvider), ThemeMode.dark);
+      expect(prefs.themeMode, ThemeMode.dark);
+    });
+
+    test('FontScaleNotifier and ReminderSoundNotifier persist updates', () {
+      final prefs = InMemoryPreferencesStorage();
+      final container = ProviderContainer(
+        overrides: [preferencesStorageProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      container.read(fontScaleProvider.notifier).updateScale(1.3);
+      expect(container.read(fontScaleProvider), 1.3);
+      expect(prefs.fontScale, 1.3);
+
+      container.read(reminderSoundProvider.notifier).setEnabled(enabled: false);
+      expect(container.read(reminderSoundProvider), isFalse);
+      expect(prefs.reminderSoundEnabled, isFalse);
     });
   });
 }

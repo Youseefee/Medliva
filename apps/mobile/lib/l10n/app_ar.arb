@@ -442,5 +442,153 @@
   "pillImageUnavailable": "صورة الدواء غير متاحة حاليًا",
   "pillImageUploadButton": "إضافة أو تغيير الصورة",
   "pillImageUploadSuccess": "تم حفظ صورة الدواء بأمان",
-  "pillImageUploadFailed": "تعذر حفظ صورة الدواء"
+  "pillImageUploadFailed": "تعذر حفظ صورة الدواء",
+  "appearanceTitle": "المظهر",
+  "themeLight": "فاتح",
+  "themeDark": "داكن",
+  "themeSystem": "تلقائي",
+  "switchToLightTheme": "تفعيل الوضع الفاتح",
+  "switchToDarkTheme": "تفعيل الوضع الداكن",
+  "signUpTitle": "إنشاء حساب جديد",
+  "signUpSubtitle": "أدخل بياناتك لإنشاء حساب جديد على ميدليفا",
+  "showPassword": "إظهار كلمة المرور",
+  "hidePassword": "إخفاء كلمة المرور",
+  "authErrorInvalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة",
+  "authErrorEmailNotConfirmed": "يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إليك",
+  "authErrorUserAlreadyExists": "البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك",
+  "authErrorWeakPassword": "كلمة المرور يجب ألا تقل عن 6 أحرف",
+  "authErrorNetwork": "تعذر الاتصال، يرجى التحقق من اتصال الإنترنت",
+  "authErrorGeneric": "حدث خطأ أثناء تسجيل الدخول، يرجى المحاولة مرة أخرى",
+  "logoutConfirmTitle": "تسجيل الخروج",
+  "logoutConfirmMessage": "هل أنت متأكد من تسجيل الخروج من حسابك؟",
+  "greetingFallbackName": "عزيزنا",
+  "offlineSyncPending": "يوجد {count} إجراء بانتظار المزامنة",
+  "@offlineSyncPending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "offlineSyncNow": "مزامنة الآن",
+  "offlineSyncSuccess": "تمت المزامنة بنجاح",
+  "reminderSoundEnabled": "نغمة واضحة مفعّلة",
+  "reminderSoundMuted": "صامت (بدون صوت)",
+  "notificationsLoadError": "تعذر تحميل الإشعارات، اسحب للتحديث أو أعد المحاولة",
+  "retryAction": "إعادة المحاولة",
+  "doseLoggedOffline": "تم الحفظ محلياً — ستتم المزامنة عند عودة الإنترنت",
+  "doseSnoozedSuccess": "تم تأجيل الجرعة لمدة 15 دقيقة",
+  "medicationSavedSuccess": "تم حفظ الدواء بنجاح",
+  "scheduleAddedSuccess": "تمت إضافة موعد الجرعة",
+  "scheduleDeletedSuccess": "تم حذف موعد الجرعة",
+  "deleteScheduleConfirm": "هل أنت متأكد من حذف هذا الموعد؟",
+  "invalidTimeFormat": "يرجى إدخال وقت صحيح بصيغة HH:MM",
+  "invalidStockNumber": "يرجى إدخال رقم صحيح غير سالب",
+  "medicationNoSchedule": "بدون مواعيد مجدولة",
+  "medicationFreqCount": "{count} مرات يومياً",
+  "@medicationFreqCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "medicationStockCount": "الرصيد: {count} قرص",
+  "@medicationStockCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "medicationExpiryLabel": "تاريخ الانتهاء",
+  "medicationAlertDaysLabel": "التنبيه قبل النفاد (أيام)",
+  "expiredBadge": "منتهي الصلاحية",
+  "expiringSoonBadge": "قارب على الانتهاء",
+  "prescriptionAddedCount": "تمت إضافة {count} أدوية بنجاح",
+  "@prescriptionAddedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "prescriptionSelectAtLeastOne": "يرجى اختيار دواء واحد على الأقل",
+  "prescriptionAddManual": "إضافة دواء يدوياً",
+  "vitalSystolicLabel": "الضغط الانقباضي (الكبير)",
+  "vitalDiastolicLabel": "الضغط الانبساطي (الصغير)",
+  "vitalGlucoseLabel": "مستوى السكر (مجم/دسل)",
+  "vitalPulseLabel": "معدل النبض (نبضة/دقيقة)",
+  "vitalInvalidValue": "يرجى إدخال قيمة قياس صحيحة",
+  "vitalSystolicGreaterError": "يجب أن يكون الضغط الانقباضي أكبر من الانبساطي",
+  "mealContextFasting": "صائم",
+  "mealContextPostMeal": "بعد الأكل",
+  "mealContextRandom": "عشوائي",
+  "vitalPulseTab": "النبض",
+  "inventoryEmptyTitle": "لا توجد أدوية في المخزون",
+  "inventoryEmptySubtitle": "أضف أدويتك لمتابعة المخزون وتنبيهات إعادة التعبئة",
+  "inventoryRefillSheetTitle": "طلب إعادة تعبئة الدواء",
+  "inventoryCopyMessage": "نسخ رسالة الطلب",
+  "inventoryCopiedMessage": "تم نسخ رسالة الطلب",
+  "inventoryUpdateStock": "تحديث المخزون",
+  "inventoryAddStockTitle": "إضافة كمية جديدة للمخزون",
+  "inventoryMedicationsCategory": "أدوية متاحة",
+  "pharmacyRefillGreeting": "مرحباً، أحتاج إعادة تعبئة الأدوية التالية:",
+  "copyCodeButton": "نسخ الرمز",
+  "codeCopiedMessage": "تم نسخ رمز الاقتران",
+  "codeExpiresIn": "صالح لمدة {minutes} دقيقة",
+  "@codeExpiresIn": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "pairingCodeInvalidLength": "يرجى إدخال الرمز المكون من 6 أرقام",
+  "pairingErrorExpired": "انتهت صلاحية هذا الرمز، اطلب رمزاً جديداً",
+  "pairingErrorInvalid": "رمز الاقتران غير صحيح",
+  "pairingErrorAlreadyLinked": "هذا الحساب مرتبط بالفعل",
+  "pairingErrorGeneric": "تعذر إتمام الربط، يرجى المحاولة مرة أخرى",
+  "caregiverSelectedBadge": "المريض المختار",
+  "caregiverMissedCount": "{count} فائتة",
+  "@caregiverMissedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contactEditTitle": "تعديل جهة الاتصال",
+  "contactDeleteConfirm": "هل أنت متأكد من حذف جهة الاتصال هذه؟",
+  "contactSavedSuccess": "تم حفظ جهة الاتصال بنجاح",
+  "contactDeletedSuccess": "تم حذف جهة الاتصال",
+  "contactPrimaryLabel": "جهة اتصال رئيسية",
+  "contactNameRequired": "يرجى إدخال اسم جهة الاتصال",
+  "contactPhoneRequired": "يرجى إدخال رقم هاتف صحيح",
+  "sosHoldHint": "استمر بالضغط لمدة 2 ثانية لتأكيد الاستغاثة",
+  "sosContactCallTitle": "اتصل بجهة الاتصال",
+  "sosCopyPhone": "نسخ الرقم",
+  "sosPhoneCopied": "تم نسخ رقم الهاتف",
+  "reportRangeDays": "آخر {days} يوم",
+  "@reportRangeDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "reportAdherenceSummary": "نسبة الالتزام: {rate}%",
+  "@reportAdherenceSummary": {
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "reportLoadError": "تعذر تحميل بيانات التقرير",
+  "reportLinkCopied": "تم نسخ رابط التقرير الآمن",
+  "reportNoPatientSelected": "يرجى اختيار مريض أولاً لإنشاء التقرير",
+  "reportQrHint": "امسح الرمز لفتح التقرير الطبي المؤقت",
+  "reportPreviewPrintButton": "معاينة وطباعة PDF",
+  "reportPdfError": "تعذر إنشاء ملف PDF"
 }

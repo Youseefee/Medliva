@@ -100,4 +100,55 @@ void main() {
     // Read-only TodayScreen does not show Taken/Skip buttons
     expect(find.byKey(const ValueKey('take_btn_sched-1')), findsNothing);
   });
+
+  testWidgets(
+      'CaregiverDashboardScreen falls back to phone for blank name and displays missed doses',
+      (tester) async {
+    when(() => caregiverRepository.listLinkedPatients()).thenAnswer(
+      (_) async => [
+        LinkedPatientModel(
+          patientId: 'patient-blank',
+          phone: '+201055554444',
+          name: '',
+          status: 'active',
+          todayTakenCount: 1,
+          todayMissedCount: 1,
+          activeAlertsCount: 1,
+          missedDoses: [
+            MissedDoseAlertModel(
+              scheduleId: 'sched-1',
+              medicationId: 'med-1',
+              medicationName: 'Concor 5mg',
+              timeOfDay: '08:00',
+              scheduledTime: DateTime.utc(2026, 10, 27, 8),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authNotifierProvider.overrideWith(_FakeCaregiverAuthNotifier.new),
+          caregiverRepositoryProvider.overrideWithValue(caregiverRepository),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: CaregiverDashboardScreen()),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('+201055554444'), findsOneWidget);
+    expect(find.text('Concor 5mg • 08:00'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('selected_badge_patient-blank')),
+      findsOneWidget,
+    );
+  });
 }

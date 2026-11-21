@@ -48,6 +48,27 @@ class EmergencyContactCreateInput {
       };
 }
 
+class EmergencyContactUpdateInput {
+  const EmergencyContactUpdateInput({
+    required this.name,
+    required this.phone,
+    this.relationship,
+    this.isPrimary = false,
+  });
+
+  final String name;
+  final String phone;
+  final String? relationship;
+  final bool isPrimary;
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'phone': phone,
+        'relationship': relationship,
+        'is_primary': isPrimary,
+      };
+}
+
 class SosResponseModel {
   const SosResponseModel({
     required this.status,

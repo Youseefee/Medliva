@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:medliva/core/router/app_router.dart';
 import 'package:medliva/core/storage/token_storage.dart';
 import 'package:medliva/features/auth/data/auth_repository.dart';
 import 'package:medliva/features/auth/domain/models/user.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
 import 'package:medliva/features/caregiver/data/caregiver_repository.dart';
 import 'package:medliva/features/medications/data/medication_repository.dart';
+import 'package:medliva/features/medications/presentation/screens/dose_reminder_screen.dart';
 import 'package:medliva/main.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MockTokenStorage extends Mock implements TokenStorage;
 
@@ -110,5 +113,95 @@ void main() {
 
     container.read(selectedPatientIdProvider.notifier).selectPatient('patient-123');
     expect(container.read(currentPatientIdProvider), 'patient-123');
+  });
+
+  testWidgets(
+      'Invalid login with GoRouter preserves form state and shows error SnackBar',
+      (tester) async {
+    when(() => tokenStorage.getAccessToken()).thenAnswer((_) async => null);
+    when(
+      () => authRepository.signIn(
+        email: any(named: 'email'),
+        password: any(named: 'password'),
+      ),
+    ).thenThrow(
+      const AuthException(
+        'Invalid login credentials',
+        statusCode: '400',
+        code: 'invalid_credentials',
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        tokenStorageProvider.overrideWithValue(tokenStorage),
+        authRepositoryProvider.overrideWithValue(authRepository),
+        medicationRepositoryProvider.overrideWithValue(medicationRepository),
+        caregiverRepositoryProvider.overrideWithValue(caregiverRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MedlivaApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'البريد الإلكتروني'),
+      'senior@example.com',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'كلمة المرور'),
+      'wrongpass',
+    );
+    await tester.tap(find.widgetWithText(ElevatedButton, 'تسجيل الدخول'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('البريد الإلكتروني أو كلمة المرور غير صحيحة'),
+      findsOneWidget,
+    );
+    expect(find.text('senior@example.com'), findsOneWidget);
+  });
+
+  testWidgets('/medications/reminder resolves to DoseReminderScreen before :id',
+      (tester) async {
+    when(() => tokenStorage.getAccessToken())
+        .thenAnswer((_) async => 'patient_token');
+    when(() => authRepository.getMe()).thenAnswer(
+      (_) async => const UserModel(
+        id: 'patient-123',
+        phone: '+201012345678',
+        role: 'patient',
+        name: 'عم أحمد',
+      ),
+    );
+
+    final container = ProviderContainer(
+      overrides: [
+        tokenStorageProvider.overrideWithValue(tokenStorage),
+        authRepositoryProvider.overrideWithValue(authRepository),
+        medicationRepositoryProvider.overrideWithValue(medicationRepository),
+        caregiverRepositoryProvider.overrideWithValue(caregiverRepository),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MedlivaApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    container.read(appRouterProvider).go('/medications/reminder');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DoseReminderScreen), findsOneWidget);
   });
 }

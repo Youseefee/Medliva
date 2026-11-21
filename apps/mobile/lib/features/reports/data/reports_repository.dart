@@ -45,35 +45,46 @@ class ReportsRepository {
     final medicationRows = await _supabaseClient
         .from('medications')
         .select(
-          'id, name, form, strength, stock_count, schedules(id, time_of_day)',
+          'id, name, form, strength, stock_count, is_active, schedules(id, time_of_day, is_active)',
         )
-        .eq('patient_id', patientId)
-        .eq('is_active', true);
+        .eq('patient_id', patientId);
 
     final medicationNamesBySchedule = <String, String>{};
-    final activeMedications = (medicationRows as List<dynamic>).map((raw) {
+    final activeMedications = <Map<String, dynamic>>[];
+
+    for (final raw in medicationRows as List<dynamic>) {
       final medication = Map<String, dynamic>.from(raw as Map);
+      final medName = medication['name']?.toString() ?? '';
+      final medIsActive = medication['is_active'] as bool? ?? true;
       final schedules = (medication['schedules'] as List<dynamic>? ?? const [])
           .map((schedule) => Map<String, dynamic>.from(schedule as Map));
-      final times = <String>[];
+      final activeTimes = <String>[];
+
       for (final schedule in schedules) {
         final scheduleId = schedule['id']?.toString();
         if (scheduleId != null) {
-          medicationNamesBySchedule[scheduleId] =
-              medication['name']?.toString() ?? '';
+          medicationNamesBySchedule[scheduleId] = medName;
         }
-        final rawTime = schedule['time_of_day']?.toString() ?? '';
-        times.add(rawTime.length >= 5 ? rawTime.substring(0, 5) : rawTime);
+        final scheduleIsActive = schedule['is_active'] as bool? ?? true;
+        if (medIsActive && scheduleIsActive) {
+          final rawTime = schedule['time_of_day']?.toString() ?? '';
+          activeTimes.add(
+            rawTime.length >= 5 ? rawTime.substring(0, 5) : rawTime,
+          );
+        }
       }
-      return <String, dynamic>{
-        'id': medication['id'],
-        'name': medication['name'],
-        'dose_form': medication['form'],
-        'strength': medication['strength'],
-        'stock_count': medication['stock_count'],
-        'times': times,
-      };
-    }).toList();
+
+      if (medIsActive) {
+        activeMedications.add(<String, dynamic>{
+          'id': medication['id'],
+          'name': medication['name'],
+          'dose_form': medication['form'],
+          'strength': medication['strength'],
+          'stock_count': medication['stock_count'],
+          'times': activeTimes,
+        });
+      }
+    }
 
     final logRows = await _supabaseClient
         .from('intake_logs')
@@ -106,16 +117,19 @@ class ReportsRepository {
         .lt('recorded_at', endExclusive)
         .order('recorded_at', ascending: false);
     final totalDoses = adherenceHistory.length;
+    final roundedRate = totalDoses == 0
+        ? 100.0
+        : ((taken / totalDoses) * 1000).round() / 10;
 
     return ReportSummaryModel(
       patientId: patientId,
       patientName: (profile['name'] as String?)?.trim().isNotEmpty == true
           ? (profile['name'] as String).trim()
-          : 'المريض',
+          : 'Medliva Patient',
       patientPhone: profile['phone'] as String?,
       fromDate: _dateOnly(startDate),
       toDate: _dateOnly(endDate),
-      adherenceRatePct: totalDoses == 0 ? 100 : (taken / totalDoses) * 100,
+      adherenceRatePct: roundedRate,
       totalDoses: totalDoses,
       takenDoses: taken,
       skippedDoses: skipped,
@@ -180,6 +194,32 @@ class _ReportFonts {
 
 class DoctorReportPdfBuilder {
   const DoctorReportPdfBuilder();
+
+  static final _arabicRegex = RegExp(r'[\u0600-\u06FF]');
+
+  static bool _containsArabic(String value) => _arabicRegex.hasMatch(value);
+
+  static String formatRate(double rate) {
+    final rounded = (rate * 10).round() / 10;
+    return rounded % 1 == 0
+        ? '${rounded.toInt()}%'
+        : '${rounded.toStringAsFixed(1)}%';
+  }
+
+  static String formatTimestamp(dynamic raw) {
+    if (raw == null) return '-';
+    final value = raw.toString().trim();
+    if (value.isEmpty) return '-';
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return value;
+    final utc = parsed.toUtc();
+    final y = utc.year.toString().padLeft(4, '0');
+    final m = utc.month.toString().padLeft(2, '0');
+    final d = utc.day.toString().padLeft(2, '0');
+    final hh = utc.hour.toString().padLeft(2, '0');
+    final mm = utc.minute.toString().padLeft(2, '0');
+    return '$y-$m-$d $hh:$mm';
+  }
 
   /// Fonts used by the report. `supportsArabic` is false when the Arabic
   /// font could not be loaded, in that case Arabic text is transliterated.
@@ -282,44 +322,175 @@ class DoctorReportPdfBuilder {
     return res.isEmpty ? text : res;
   }
 
+  static pw.Widget _cellText(
+    String value, {
+    required bool supportsArabic,
+    required bool defaultRtl,
+    bool bold = false,
+  }) {
+    final safeValue = supportsArabic ? value : _toLatin(value);
+    final isCellRtl = defaultRtl || (supportsArabic && _containsArabic(safeValue));
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+      child: pw.Directionality(
+        textDirection: isCellRtl ? pw.TextDirection.rtl : pw.TextDirection.ltr,
+        child: pw.Text(
+          safeValue,
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+          ),
+          textAlign: isCellRtl ? pw.TextAlign.right : pw.TextAlign.left,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _buildStyledTable({
+    required List<String> headers,
+    required List<List<String>> rows,
+    required String emptyLabel,
+    required bool isRtl,
+    required bool supportsArabic,
+  }) {
+    final displayHeaders = isRtl ? headers.reversed.toList() : headers;
+    final displayRows = rows.isEmpty
+        ? [
+            [
+              emptyLabel,
+              for (var i = 1; i < headers.length; i++) '',
+            ],
+          ]
+        : rows.map((row) => isRtl ? row.reversed.toList() : row).toList();
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.6),
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.teal50),
+          children: [
+            for (final header in displayHeaders)
+              _cellText(
+                header,
+                supportsArabic: supportsArabic,
+                defaultRtl: isRtl,
+                bold: true,
+              ),
+          ],
+        ),
+        for (final row in displayRows)
+          pw.TableRow(
+            children: [
+              for (final cell in row)
+                _cellText(
+                  cell,
+                  supportsArabic: supportsArabic,
+                  defaultRtl: isRtl,
+                ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  static String _statusLabel(String raw, bool rtl) {
+    final lower = raw.toLowerCase();
+    if (!rtl) return lower.isEmpty ? '-' : lower.toUpperCase();
+    return switch (lower) {
+      'taken' => 'تم التناول',
+      'skipped' => 'تم التخطي',
+      'missed' => 'فائتة',
+      'snoozed' => 'مؤجلة',
+      _ => raw.isEmpty ? '-' : raw,
+    };
+  }
+
+  static String _vitalTypeLabel(String raw, bool rtl) {
+    final lower = raw.toLowerCase();
+    if (!rtl) return lower.isEmpty ? '-' : lower.toUpperCase();
+    return switch (lower) {
+      'bp' => 'ضغط الدم',
+      'glucose' => 'السكر',
+      'pulse' => 'النبض',
+      _ => raw.isEmpty ? '-' : raw,
+    };
+  }
+
+  static String _bandLabel(String raw, bool rtl) {
+    final lower = raw.toLowerCase();
+    if (!rtl) {
+      return lower == 'normal' ? 'NORMAL' : 'ABNORMAL (${lower.toUpperCase()})';
+    }
+    return switch (lower) {
+      'normal' => 'طبيعي',
+      'borderline' => 'حدودي (يحتاج متابعة)',
+      'critical' => 'حرج (غير طبيعي)',
+      _ => raw,
+    };
+  }
+
   Future<Uint8List> buildPdf({
     required ReportSummaryModel summary,
     pw.Font? customFont,
+    bool isArabic = false,
   }) async {
-    // The doctor report is always generated in English (LTR).
     final doc = pw.Document();
     final fonts = await _loadFonts(customFont);
     final baseFont = fonts.base ?? pw.Font.helvetica();
     final boldFont = fonts.bold ?? pw.Font.helveticaBold();
+    final useArabicLayout = isArabic && fonts.supportsArabic;
+    final pageDirection = useArabicLayout
+        ? pw.TextDirection.rtl
+        : pw.TextDirection.ltr;
 
-    // Arabic is kept as-is when the embedded font supports it, otherwise it
-    // is transliterated so the doctor still gets a readable report.
     String text(String value) => fonts.supportsArabic ? value : _toLatin(value);
+    final formattedRate = formatRate(summary.adherenceRatePct);
+    final emptyRowText = useArabicLayout
+        ? 'لا توجد سجلات في هذه الفترة'
+        : 'No records in this period';
 
     doc.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        textDirection: pw.TextDirection.ltr,
+        textDirection: pageDirection,
         theme: pw.ThemeData.withFont(base: baseFont, bold: boldFont),
         build: (context) => [
           // Header
           pw.Header(
             level: 0,
             child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              crossAxisAlignment: useArabicLayout
+                  ? pw.CrossAxisAlignment.end
+                  : pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'Medliva - Doctor Medical Report',
+                  useArabicLayout
+                      ? 'ميدليفا - التقرير الطبي للطبيب'
+                      : 'Medliva - Doctor Medical Report',
                   style: const pw.TextStyle(
                     fontSize: 18,
                     fontWeight: pw.FontWeight.bold,
                   ),
                 ),
                 pw.SizedBox(height: 4),
-                pw.Text(
-                  'Patient: ${text(summary.patientName)} (${summary.patientPhone ?? 'not provided'})',
+                pw.Directionality(
+                  textDirection:
+                      useArabicLayout ||
+                          (fonts.supportsArabic &&
+                              _containsArabic(summary.patientName))
+                      ? pw.TextDirection.rtl
+                      : pw.TextDirection.ltr,
+                  child: pw.Text(
+                    useArabicLayout
+                        ? 'المريض: ${text(summary.patientName)} (${summary.patientPhone ?? 'غير مسجل'})'
+                        : 'Patient: ${text(summary.patientName)} (${summary.patientPhone ?? 'not provided'})',
+                  ),
                 ),
-                pw.Text('Date Range: ${summary.fromDate} -> ${summary.toDate}'),
+                pw.Text(
+                  useArabicLayout
+                      ? 'الفترة الزمنية: ${summary.fromDate} إلى ${summary.toDate}'
+                      : 'Date Range: ${summary.fromDate} -> ${summary.toDate}',
+                ),
               ],
             ),
           ),
@@ -327,89 +498,115 @@ class DoctorReportPdfBuilder {
 
           // Active Medications Table
           pw.Text(
-            'Active Medications',
+            useArabicLayout ? 'الأدوية الحالية' : 'Active Medications',
             style: const pw.TextStyle(
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
           pw.SizedBox(height: 6),
-          pw.TableHelper.fromTextArray(
-            headers: const ['Medication', 'Strength', 'Form', 'Times'],
-            data: summary.activeMedications
+          _buildStyledTable(
+            headers: useArabicLayout
+                ? const ['الدواء', 'التركيز', 'الشكل', 'المواعيد']
+                : const ['Medication', 'Strength', 'Form', 'Times'],
+            rows: summary.activeMedications
                 .map(
                   (m) => [
-                    text((m['name'] ?? '').toString()),
-                    text((m['strength'] ?? '-').toString()),
-                    text((m['dose_form'] ?? '-').toString()),
+                    (m['name'] ?? '-').toString(),
+                    (m['strength'] ?? '-').toString(),
+                    (m['dose_form'] ?? '-').toString(),
                     ((m['times'] as List<dynamic>?) ?? const []).join(', '),
                   ],
                 )
                 .toList(),
+            emptyLabel: emptyRowText,
+            isRtl: useArabicLayout,
+            supportsArabic: fonts.supportsArabic,
           ),
           pw.SizedBox(height: 16),
 
           // Adherence Summary + Table
           pw.Text(
-            'Adherence Summary: ${summary.adherenceRatePct}% '
-            '(Taken: ${summary.takenDoses}/${summary.totalDoses}, '
-            'Skipped: ${summary.skippedDoses}, '
-            'Missed: ${summary.missedDosesCount})',
+            useArabicLayout
+                ? 'ملخص الالتزام: $formattedRate '
+                    '(تم تناول: ${summary.takenDoses}/${summary.totalDoses}، '
+                    'تخطي: ${summary.skippedDoses}، '
+                    'فائتة: ${summary.missedDosesCount})'
+                : 'Adherence Summary: $formattedRate '
+                    '(Taken: ${summary.takenDoses}/${summary.totalDoses}, '
+                    'Skipped: ${summary.skippedDoses}, '
+                    'Missed: ${summary.missedDosesCount})',
             style: const pw.TextStyle(
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
           pw.SizedBox(height: 6),
-          pw.TableHelper.fromTextArray(
-            headers: const ['Medication', 'Scheduled', 'Actual', 'Status'],
-            data: summary.adherenceHistory
+          _buildStyledTable(
+            headers: useArabicLayout
+                ? const ['الدواء', 'الموعد المحدد', 'وقت التناول', 'الحالة']
+                : const ['Medication', 'Scheduled', 'Actual', 'Status'],
+            rows: summary.adherenceHistory
                 .map(
-                  (log) => [
-                    text((log['medication_name'] ?? '-').toString()),
-                    (log['scheduled_time'] ?? '-').toString(),
-                    (log['actual_time'] ?? '-').toString(),
-                    (log['status'] ?? '-').toString().toUpperCase(),
-                  ],
+                  (log) {
+                    final rawName = log['medication_name']?.toString() ?? '';
+                    final medName = rawName.isNotEmpty ? rawName : '-';
+                    return [
+                      medName,
+                      formatTimestamp(log['scheduled_time']),
+                      formatTimestamp(log['actual_time']),
+                      _statusLabel(
+                        (log['status'] ?? '').toString(),
+                        useArabicLayout,
+                      ),
+                    ];
+                  },
                 )
                 .toList(),
+            emptyLabel: emptyRowText,
+            isRtl: useArabicLayout,
+            supportsArabic: fonts.supportsArabic,
           ),
           pw.SizedBox(height: 16),
 
           // Vitals Table with abnormal values marked by text
           pw.Text(
-            'Vitals History',
+            useArabicLayout ? 'سجل القياسات الحيوية' : 'Vitals History',
             style: const pw.TextStyle(
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,
             ),
           ),
           pw.SizedBox(height: 6),
-          pw.TableHelper.fromTextArray(
-            headers: const ['Type', 'Value', 'Triage Status', 'Recorded At'],
-            data: summary.vitalsHistory.map((v) {
+          _buildStyledTable(
+            headers: useArabicLayout
+                ? const ['القياس', 'القيمة', 'التقييم', 'التاريخ']
+                : const ['Type', 'Value', 'Triage Status', 'Recorded At'],
+            rows: summary.vitalsHistory.map((v) {
               final p = v['value_primary'];
               final s = v['value_secondary'];
               final valStr = s != null ? '$p/$s' : '$p';
               final band = (v['band'] ?? 'normal').toString();
-              final bandText = band == 'normal'
-                  ? 'NORMAL'
-                  : 'ABNORMAL (${band.toUpperCase()})';
               return [
-                (v['type'] ?? '-').toString().toUpperCase(),
+                _vitalTypeLabel((v['type'] ?? '').toString(), useArabicLayout),
                 valStr,
-                bandText,
-                (v['recorded_at'] ?? '-').toString(),
+                _bandLabel(band, useArabicLayout),
+                formatTimestamp(v['recorded_at']),
               ];
             }).toList(),
+            emptyLabel: emptyRowText,
+            isRtl: useArabicLayout,
+            supportsArabic: fonts.supportsArabic,
           ),
           pw.SizedBox(height: 24),
 
           // Footer Disclaimer
           pw.Divider(),
           pw.Text(
-            'Disclaimer: Generated by Medliva for clinical follow-up. '
-            'Does not replace direct medical evaluation.',
+            useArabicLayout
+                ? 'إخلاء مسؤولية: هذا التقرير صادر آلياً من تطبيق ميدليفا للمتابعة الطبية ولا يغني عن الاستشارة الطبية المباشرة.'
+                : 'Disclaimer: Generated by Medliva for clinical follow-up. '
+                    'Does not replace direct medical evaluation.',
             style: const pw.TextStyle(fontSize: 10),
           ),
         ],

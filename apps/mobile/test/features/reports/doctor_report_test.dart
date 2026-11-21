@@ -208,5 +208,60 @@ void main() {
       find.textContaining('https://medliva.app/r/tok-123'),
       findsWidgets,
     );
+    expect(find.byKey(const ValueKey('report_qr_code')), findsOneWidget);
+    expect(find.byKey(const ValueKey('copy_share_link_btn')), findsOneWidget);
+  });
+
+  test('DoctorReportPdfBuilder builds Arabic RTL PDF and handles empty tables',
+      () async {
+    const emptySummary = ReportSummaryModel(
+      patientId: 'patient-2',
+      patientName: 'عم محمود',
+      patientPhone: null,
+      fromDate: '2026-10-01',
+      toDate: '2026-10-31',
+      adherenceRatePct: 66.6666,
+      totalDoses: 3,
+      takenDoses: 2,
+      skippedDoses: 0,
+      missedDosesCount: 1,
+    );
+    const builder = DoctorReportPdfBuilder();
+    final bytes = await builder.buildPdf(
+      summary: emptySummary,
+      isArabic: true,
+    );
+
+    expect(bytes, isNotEmpty);
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+    expect(DoctorReportPdfBuilder.formatRate(66.6666), '66.7%');
+    expect(DoctorReportPdfBuilder.formatRate(90), '90%');
+    expect(
+      DoctorReportPdfBuilder.formatTimestamp('2026-10-23T08:03:00Z'),
+      '2026-10-23 08:03',
+    );
+  });
+
+  testWidgets('DoctorReportScreen shows localized empty state when no patient is selected',
+      (tester) async {
+    final repository = MockReportsRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentPatientIdProvider.overrideWithValue(null),
+          reportsRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: DoctorReportScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('report_no_patient_card')), findsOneWidget);
   });
 }

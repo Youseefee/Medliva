@@ -79,11 +79,16 @@ void main() {
       expect(reminders.every((r) => r.scheduleId == 'sched-3'), isTrue);
     });
 
-    test('notificationIdsForSchedule returns all 4 notification IDs for cancellation',
+    test('notificationIdsForSchedule returns all 4 deterministic IDs + snooze ID',
         () {
-      final ids = planner.notificationIdsForSchedule('sched-1');
-      expect(ids, hasLength(4));
-      expect(ids.toSet(), hasLength(4));
+      final ids1 = planner.notificationIdsForSchedule('sched-1');
+      final ids2 = planner.notificationIdsForSchedule('sched-1');
+      expect(ids1, hasLength(4));
+      expect(ids1.toSet(), hasLength(4));
+      expect(ids1, equals(ids2));
+
+      final snoozeId = planner.snoozeNotificationIdForSchedule('sched-1');
+      expect(ids1, isNot(contains(snoozeId)));
     });
   });
 }

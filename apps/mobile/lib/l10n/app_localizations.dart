@@ -1591,6 +1591,558 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'تعذر حفظ صورة الدواء'**
   String get pillImageUploadFailed;
+
+  /// No description provided for @appearanceTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'المظهر'**
+  String get appearanceTitle;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In ar, this message translates to:
+  /// **'فاتح'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In ar, this message translates to:
+  /// **'داكن'**
+  String get themeDark;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In ar, this message translates to:
+  /// **'تلقائي'**
+  String get themeSystem;
+
+  /// No description provided for @switchToLightTheme.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفعيل الوضع الفاتح'**
+  String get switchToLightTheme;
+
+  /// No description provided for @switchToDarkTheme.
+  ///
+  /// In ar, this message translates to:
+  /// **'تفعيل الوضع الداكن'**
+  String get switchToDarkTheme;
+
+  /// No description provided for @signUpTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء حساب جديد'**
+  String get signUpTitle;
+
+  /// No description provided for @signUpSubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدخل بياناتك لإنشاء حساب جديد على ميدليفا'**
+  String get signUpSubtitle;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'إظهار كلمة المرور'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'إخفاء كلمة المرور'**
+  String get hidePassword;
+
+  /// No description provided for @authErrorInvalidCredentials.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد الإلكتروني أو كلمة المرور غير صحيحة'**
+  String get authErrorInvalidCredentials;
+
+  /// No description provided for @authErrorEmailNotConfirmed.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إليك'**
+  String get authErrorEmailNotConfirmed;
+
+  /// No description provided for @authErrorUserAlreadyExists.
+  ///
+  /// In ar, this message translates to:
+  /// **'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك'**
+  String get authErrorUserAlreadyExists;
+
+  /// No description provided for @authErrorWeakPassword.
+  ///
+  /// In ar, this message translates to:
+  /// **'كلمة المرور يجب ألا تقل عن 6 أحرف'**
+  String get authErrorWeakPassword;
+
+  /// No description provided for @authErrorNetwork.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر الاتصال، يرجى التحقق من اتصال الإنترنت'**
+  String get authErrorNetwork;
+
+  /// No description provided for @authErrorGeneric.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدث خطأ أثناء تسجيل الدخول، يرجى المحاولة مرة أخرى'**
+  String get authErrorGeneric;
+
+  /// No description provided for @logoutConfirmTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل الخروج'**
+  String get logoutConfirmTitle;
+
+  /// No description provided for @logoutConfirmMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد من تسجيل الخروج من حسابك؟'**
+  String get logoutConfirmMessage;
+
+  /// No description provided for @greetingFallbackName.
+  ///
+  /// In ar, this message translates to:
+  /// **'عزيزنا'**
+  String get greetingFallbackName;
+
+  /// No description provided for @offlineSyncPending.
+  ///
+  /// In ar, this message translates to:
+  /// **'يوجد {count} إجراء بانتظار المزامنة'**
+  String offlineSyncPending(int count);
+
+  /// No description provided for @offlineSyncNow.
+  ///
+  /// In ar, this message translates to:
+  /// **'مزامنة الآن'**
+  String get offlineSyncNow;
+
+  /// No description provided for @offlineSyncSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت المزامنة بنجاح'**
+  String get offlineSyncSuccess;
+
+  /// No description provided for @reminderSoundEnabled.
+  ///
+  /// In ar, this message translates to:
+  /// **'نغمة واضحة مفعّلة'**
+  String get reminderSoundEnabled;
+
+  /// No description provided for @reminderSoundMuted.
+  ///
+  /// In ar, this message translates to:
+  /// **'صامت (بدون صوت)'**
+  String get reminderSoundMuted;
+
+  /// No description provided for @notificationsLoadError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل الإشعارات، اسحب للتحديث أو أعد المحاولة'**
+  String get notificationsLoadError;
+
+  /// No description provided for @retryAction.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get retryAction;
+
+  /// No description provided for @doseLoggedOffline.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم الحفظ محلياً — ستتم المزامنة عند عودة الإنترنت'**
+  String get doseLoggedOffline;
+
+  /// No description provided for @doseSnoozedSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تأجيل الجرعة لمدة 15 دقيقة'**
+  String get doseSnoozedSuccess;
+
+  /// No description provided for @medicationSavedSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ الدواء بنجاح'**
+  String get medicationSavedSuccess;
+
+  /// No description provided for @scheduleAddedSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت إضافة موعد الجرعة'**
+  String get scheduleAddedSuccess;
+
+  /// No description provided for @scheduleDeletedSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف موعد الجرعة'**
+  String get scheduleDeletedSuccess;
+
+  /// No description provided for @deleteScheduleConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد من حذف هذا الموعد؟'**
+  String get deleteScheduleConfirm;
+
+  /// No description provided for @invalidTimeFormat.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى إدخال وقت صحيح بصيغة HH:MM'**
+  String get invalidTimeFormat;
+
+  /// No description provided for @invalidStockNumber.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى إدخال رقم صحيح غير سالب'**
+  String get invalidStockNumber;
+
+  /// No description provided for @medicationNoSchedule.
+  ///
+  /// In ar, this message translates to:
+  /// **'بدون مواعيد مجدولة'**
+  String get medicationNoSchedule;
+
+  /// No description provided for @medicationFreqCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} مرات يومياً'**
+  String medicationFreqCount(int count);
+
+  /// No description provided for @medicationStockCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'الرصيد: {count} قرص'**
+  String medicationStockCount(int count);
+
+  /// No description provided for @medicationExpiryLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الانتهاء'**
+  String get medicationExpiryLabel;
+
+  /// No description provided for @medicationAlertDaysLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'التنبيه قبل النفاد (أيام)'**
+  String get medicationAlertDaysLabel;
+
+  /// No description provided for @expiredBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'منتهي الصلاحية'**
+  String get expiredBadge;
+
+  /// No description provided for @expiringSoonBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'قارب على الانتهاء'**
+  String get expiringSoonBadge;
+
+  /// No description provided for @prescriptionAddedCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'تمت إضافة {count} أدوية بنجاح'**
+  String prescriptionAddedCount(int count);
+
+  /// No description provided for @prescriptionSelectAtLeastOne.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى اختيار دواء واحد على الأقل'**
+  String get prescriptionSelectAtLeastOne;
+
+  /// No description provided for @prescriptionAddManual.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة دواء يدوياً'**
+  String get prescriptionAddManual;
+
+  /// No description provided for @vitalSystolicLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الضغط الانقباضي (الكبير)'**
+  String get vitalSystolicLabel;
+
+  /// No description provided for @vitalDiastolicLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'الضغط الانبساطي (الصغير)'**
+  String get vitalDiastolicLabel;
+
+  /// No description provided for @vitalGlucoseLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'مستوى السكر (مجم/دسل)'**
+  String get vitalGlucoseLabel;
+
+  /// No description provided for @vitalPulseLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'معدل النبض (نبضة/دقيقة)'**
+  String get vitalPulseLabel;
+
+  /// No description provided for @vitalInvalidValue.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى إدخال قيمة قياس صحيحة'**
+  String get vitalInvalidValue;
+
+  /// No description provided for @vitalSystolicGreaterError.
+  ///
+  /// In ar, this message translates to:
+  /// **'يجب أن يكون الضغط الانقباضي أكبر من الانبساطي'**
+  String get vitalSystolicGreaterError;
+
+  /// No description provided for @mealContextFasting.
+  ///
+  /// In ar, this message translates to:
+  /// **'صائم'**
+  String get mealContextFasting;
+
+  /// No description provided for @mealContextPostMeal.
+  ///
+  /// In ar, this message translates to:
+  /// **'بعد الأكل'**
+  String get mealContextPostMeal;
+
+  /// No description provided for @mealContextRandom.
+  ///
+  /// In ar, this message translates to:
+  /// **'عشوائي'**
+  String get mealContextRandom;
+
+  /// No description provided for @vitalPulseTab.
+  ///
+  /// In ar, this message translates to:
+  /// **'النبض'**
+  String get vitalPulseTab;
+
+  /// No description provided for @inventoryEmptyTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد أدوية في المخزون'**
+  String get inventoryEmptyTitle;
+
+  /// No description provided for @inventoryEmptySubtitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'أضف أدويتك لمتابعة المخزون وتنبيهات إعادة التعبئة'**
+  String get inventoryEmptySubtitle;
+
+  /// No description provided for @inventoryRefillSheetTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'طلب إعادة تعبئة الدواء'**
+  String get inventoryRefillSheetTitle;
+
+  /// No description provided for @inventoryCopyMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ رسالة الطلب'**
+  String get inventoryCopyMessage;
+
+  /// No description provided for @inventoryCopiedMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ رسالة الطلب'**
+  String get inventoryCopiedMessage;
+
+  /// No description provided for @inventoryUpdateStock.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحديث المخزون'**
+  String get inventoryUpdateStock;
+
+  /// No description provided for @inventoryAddStockTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة كمية جديدة للمخزون'**
+  String get inventoryAddStockTitle;
+
+  /// No description provided for @inventoryMedicationsCategory.
+  ///
+  /// In ar, this message translates to:
+  /// **'أدوية متاحة'**
+  String get inventoryMedicationsCategory;
+
+  /// No description provided for @pharmacyRefillGreeting.
+  ///
+  /// In ar, this message translates to:
+  /// **'مرحباً، أحتاج إعادة تعبئة الأدوية التالية:'**
+  String get pharmacyRefillGreeting;
+
+  /// No description provided for @copyCodeButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ الرمز'**
+  String get copyCodeButton;
+
+  /// No description provided for @codeCopiedMessage.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ رمز الاقتران'**
+  String get codeCopiedMessage;
+
+  /// No description provided for @codeExpiresIn.
+  ///
+  /// In ar, this message translates to:
+  /// **'صالح لمدة {minutes} دقيقة'**
+  String codeExpiresIn(int minutes);
+
+  /// No description provided for @pairingCodeInvalidLength.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى إدخال الرمز المكون من 6 أرقام'**
+  String get pairingCodeInvalidLength;
+
+  /// No description provided for @pairingErrorExpired.
+  ///
+  /// In ar, this message translates to:
+  /// **'انتهت صلاحية هذا الرمز، اطلب رمزاً جديداً'**
+  String get pairingErrorExpired;
+
+  /// No description provided for @pairingErrorInvalid.
+  ///
+  /// In ar, this message translates to:
+  /// **'رمز الاقتران غير صحيح'**
+  String get pairingErrorInvalid;
+
+  /// No description provided for @pairingErrorAlreadyLinked.
+  ///
+  /// In ar, this message translates to:
+  /// **'هذا الحساب مرتبط بالفعل'**
+  String get pairingErrorAlreadyLinked;
+
+  /// No description provided for @pairingErrorGeneric.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر إتمام الربط، يرجى المحاولة مرة أخرى'**
+  String get pairingErrorGeneric;
+
+  /// No description provided for @caregiverSelectedBadge.
+  ///
+  /// In ar, this message translates to:
+  /// **'المريض المختار'**
+  String get caregiverSelectedBadge;
+
+  /// No description provided for @caregiverMissedCount.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count} فائتة'**
+  String caregiverMissedCount(int count);
+
+  /// No description provided for @contactEditTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل جهة الاتصال'**
+  String get contactEditTitle;
+
+  /// No description provided for @contactDeleteConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد من حذف جهة الاتصال هذه؟'**
+  String get contactDeleteConfirm;
+
+  /// No description provided for @contactSavedSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حفظ جهة الاتصال بنجاح'**
+  String get contactSavedSuccess;
+
+  /// No description provided for @contactDeletedSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف جهة الاتصال'**
+  String get contactDeletedSuccess;
+
+  /// No description provided for @contactPrimaryLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'جهة اتصال رئيسية'**
+  String get contactPrimaryLabel;
+
+  /// No description provided for @contactNameRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى إدخال اسم جهة الاتصال'**
+  String get contactNameRequired;
+
+  /// No description provided for @contactPhoneRequired.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى إدخال رقم هاتف صحيح'**
+  String get contactPhoneRequired;
+
+  /// No description provided for @sosHoldHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'استمر بالضغط لمدة 2 ثانية لتأكيد الاستغاثة'**
+  String get sosHoldHint;
+
+  /// No description provided for @sosContactCallTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اتصل بجهة الاتصال'**
+  String get sosContactCallTitle;
+
+  /// No description provided for @sosCopyPhone.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسخ الرقم'**
+  String get sosCopyPhone;
+
+  /// No description provided for @sosPhoneCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ رقم الهاتف'**
+  String get sosPhoneCopied;
+
+  /// No description provided for @reportRangeDays.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر {days} يوم'**
+  String reportRangeDays(int days);
+
+  /// No description provided for @reportAdherenceSummary.
+  ///
+  /// In ar, this message translates to:
+  /// **'نسبة الالتزام: {rate}%'**
+  String reportAdherenceSummary(int rate);
+
+  /// No description provided for @reportLoadError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تحميل بيانات التقرير'**
+  String get reportLoadError;
+
+  /// No description provided for @reportLinkCopied.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم نسخ رابط التقرير الآمن'**
+  String get reportLinkCopied;
+
+  /// No description provided for @reportNoPatientSelected.
+  ///
+  /// In ar, this message translates to:
+  /// **'يرجى اختيار مريض أولاً لإنشاء التقرير'**
+  String get reportNoPatientSelected;
+
+  /// No description provided for @reportQrHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'امسح الرمز لفتح التقرير الطبي المؤقت'**
+  String get reportQrHint;
+
+  /// No description provided for @reportPreviewPrintButton.
+  ///
+  /// In ar, this message translates to:
+  /// **'معاينة وطباعة PDF'**
+  String get reportPreviewPrintButton;
+
+  /// No description provided for @reportPdfError.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر إنشاء ملف PDF'**
+  String get reportPdfError;
 }
 
 class _AppLocalizationsDelegate

@@ -59,15 +59,18 @@ class OfflineAdherenceQueue {
     required MedicationRepository repository,
     required OfflineQueueStore store,
     Stream<List<ConnectivityResult>>? connectivityStream,
-  })  : _repository = repository,
-        _store = store {
+  }) : _repository = repository,
+       _store = store {
     if (connectivityStream != null) {
-      _subscription = connectivityStream.listen((results) {
-        final isOnline = results.any((r) => r != ConnectivityResult.none);
-        if (isOnline) {
-          unawaited(flushQueue());
-        }
-      });
+      _subscription = connectivityStream.listen(
+        (results) {
+          final isOnline = results.any((r) => r != ConnectivityResult.none);
+          if (isOnline) {
+            unawaited(flushQueue());
+          }
+        },
+        onError: (_) {},
+      );
     }
   }
 
@@ -76,32 +79,46 @@ class OfflineAdherenceQueue {
   StreamSubscription<List<ConnectivityResult>>? _subscription;
   bool _isFlushing = false;
 
-  Future<bool> logWithOfflineFallback(IntakeLogCreateInput input) async {
-    try {
-      await _repository.logAdherence(input);
-      return true;
-    } catch (_) {
-      final existing = await _store.readItems();
-      final alreadyQueued =
-          existing.any((item) => item['client_uuid'] == input.clientUuid);
-      if (!alreadyQueued) {
-        existing.add({
-          'client_uuid': input.clientUuid,
-          'entity': 'intake_log',
-          'op': 'create',
-          'payload': {
-            'schedule_id': input.scheduleId,
-            'scheduled_time': input.scheduledTime.toUtc().toIso8601String(),
-            if (input.actualTime != null)
-              'actual_time': input.actualTime!.toUtc().toIso8601String(),
-            'status': input.status,
-            if (input.reason != null) 'reason': input.reason,
-          },
-        });
-        await _store.writeItems(existing);
-      }
-      return false;
+  Future<int> pendingCount() async => (await _store.readItems()).length;
+
+  Future<void> enqueue(IntakeLogCreateInput input) async {
+    final existing = await _store.readItems();
+    final alreadyQueued = existing.any(
+      (item) => item['client_uuid'] == input.clientUuid,
+    );
+    if (!alreadyQueued) {
+      existing.add({
+        'client_uuid': input.clientUuid,
+        'entity': 'intake_log',
+        'op': 'create',
+        'payload': {
+          'schedule_id': input.scheduleId,
+          'scheduled_time': input.scheduledTime.toUtc().toIso8601String(),
+          if (input.actualTime != null)
+            'actual_time': input.actualTime!.toUtc().toIso8601String(),
+          'status': input.status,
+          if (input.reason != null) 'reason': input.reason,
+        },
+      });
+      await _store.writeItems(existing);
     }
+  }
+
+  Future<({IntakeLogModel? log, bool synced})> logWithOfflineFallbackDetailed(
+    IntakeLogCreateInput input,
+  ) async {
+    try {
+      final log = await _repository.logAdherence(input);
+      return (log: log, synced: true);
+    } catch (_) {
+      await enqueue(input);
+      return (log: null, synced: false);
+    }
+  }
+
+  Future<bool> logWithOfflineFallback(IntakeLogCreateInput input) async {
+    final result = await logWithOfflineFallbackDetailed(input);
+    return result.synced;
   }
 
   Future<int> flushQueue() async {
@@ -134,10 +151,16 @@ final offlineQueueStoreProvider = Provider<OfflineQueueStore>((ref) {
 });
 
 final offlineAdherenceQueueProvider = Provider<OfflineAdherenceQueue>((ref) {
+  Stream<List<ConnectivityResult>>? connectivityStream;
+  try {
+    connectivityStream = Connectivity().onConnectivityChanged;
+  } catch (_) {
+    connectivityStream = null;
+  }
   final queue = OfflineAdherenceQueue(
     repository: ref.watch(medicationRepositoryProvider),
     store: ref.watch(offlineQueueStoreProvider),
-    connectivityStream: Connectivity().onConnectivityChanged,
+    connectivityStream: connectivityStream,
   );
   ref.onDispose(queue.dispose);
   return queue;

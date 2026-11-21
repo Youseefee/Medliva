@@ -159,4 +159,46 @@ void main() {
       expect(find.text('Exception: Camera permission denied'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'PrescriptionScanScreen validates at least one selected named med before confirm',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentPatientIdProvider.overrideWithValue('patient-1'),
+            prescriptionImagePickerProvider.overrideWithValue(imagePicker),
+            prescriptionRepositoryProvider.overrideWithValue(
+              prescriptionRepository,
+            ),
+            medicationRepositoryProvider.overrideWithValue(
+              medicationRepository,
+            ),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PrescriptionScanScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Add manual empty item and tap Confirm without entering name
+      await tester.tap(find.byKey(const ValueKey('scan_add_manual_btn')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('scan_confirm_btn')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Please select at least one medication'),
+        findsOneWidget,
+      );
+      // Item stays open for editing rather than being wiped
+      expect(find.byKey(const ValueKey('scan_name_field_0')), findsOneWidget);
+      verifyNever(() => medicationRepository.createMedication(any(), any()));
+    },
+  );
 }

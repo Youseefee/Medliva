@@ -77,5 +77,71 @@ void main() {
       ),
     ).called(1);
     expect(find.text('طلب إعادة تعبئة Concor 5mg'), findsOneWidget);
+    // Fake hardcoded grandchildren voice-message card is removed.
+    expect(find.text('0:28'), findsNothing);
   });
+
+  testWidgets('InventoryScreen shows empty state when no medications exist', (
+    tester,
+  ) async {
+    when(() => repository.getForecast('patient-1'))
+        .thenAnswer((_) async => const []);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentPatientIdProvider.overrideWithValue('patient-1'),
+          inventoryRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          locale: Locale('en'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: InventoryScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey('inventory_empty_card')), findsOneWidget);
+    expect(find.text('No medications in inventory'), findsOneWidget);
+  });
+
+  testWidgets(
+    'InventoryScreen shows expired badge and avoids 999 days for unscheduled meds',
+    (tester) async {
+      when(() => repository.getForecast('patient-1')).thenAnswer(
+        (_) async => const [
+          MedicationForecastModel(
+            medicationId: 'med-unsched',
+            name: 'Aspirin',
+            stockCount: 15,
+            daysRemaining: 999,
+            isExpired: true,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentPatientIdProvider.overrideWithValue('patient-1'),
+            inventoryRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: const MaterialApp(
+            locale: Locale('en'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: InventoryScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('No schedule set'), findsOneWidget);
+      expect(find.textContaining('999'), findsNothing);
+      expect(find.text('Expired'), findsOneWidget);
+      expect(find.text('Stock: 15 pills'), findsOneWidget);
+    },
+  );
 }

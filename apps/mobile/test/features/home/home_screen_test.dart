@@ -243,4 +243,51 @@ void main() {
       expect(find.text('85%'), findsNothing);
     },
   );
+
+  testWidgets(
+    'HomeScreen asks for confirmation before logging out',
+    (tester) async {
+      useTallSurface(tester);
+      await tester.pumpWidget(buildPatientShellApp());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('logout_action_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(
+        find.text('هل أنت متأكد من تسجيل الخروج من حسابك؟'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('إلغاء'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'HomeScreen and More Hub render cleanly at 1.3x font scale without overflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      when(() => medicationRepository.getTodayDoses(any()))
+          .thenAnswer((_) async => const []);
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: buildPatientShellApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('patient_shell')), findsOneWidget);
+
+      await tester.tap(find.text('المزيد'));
+      await tester.pumpAndSettle();
+      expect(find.text('مسح الروشتة'), findsOneWidget);
+    },
+  );
 }

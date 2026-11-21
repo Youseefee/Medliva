@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:medliva/features/storage/data/supabase_image_repository.dart';
 
-class _RecordingImageStorageGateway implements ImageStorageGateway {
+class _RecordingImageStorageGateway implements DeletableImageStorageGateway {
   String? uploadedBucket;
   String? uploadedPath;
   Uint8List? uploadedBytes;
@@ -14,6 +14,8 @@ class _RecordingImageStorageGateway implements ImageStorageGateway {
   String? signedBucket;
   String? signedPath;
   int? signedUrlLifetime;
+  String? deletedBucket;
+  String? deletedPath;
 
   @override
   Future<void> uploadBinary({
@@ -48,6 +50,15 @@ class _RecordingImageStorageGateway implements ImageStorageGateway {
     signedPath = path;
     signedUrlLifetime = expiresInSeconds;
     return 'https://storage.example/signed-image';
+  }
+
+  @override
+  Future<void> deleteObject({
+    required String bucket,
+    required String path,
+  }) async {
+    deletedBucket = bucket;
+    deletedPath = path;
   }
 }
 
@@ -142,5 +153,57 @@ void main() {
       throwsArgumentError,
     );
     expect(gateway.uploadedPath, isNull);
+  });
+
+  test('rejects backslash, whitespace, empty bytes, and oversized images', () async {
+    final gateway = _RecordingImageStorageGateway();
+    final repository = SupabaseImageRepository(gateway: gateway);
+
+    await expectLater(
+      repository.uploadPrescriptionImage(
+        patientId: r'patient\other',
+        bytes: Uint8List.fromList([1]),
+        fileName: 'a.jpg',
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      repository.uploadPrescriptionImage(
+        patientId: ' patient-1 ',
+        bytes: Uint8List.fromList([1]),
+        fileName: 'a.jpg',
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      repository.uploadPrescriptionImage(
+        patientId: 'patient-1',
+        bytes: Uint8List(0),
+        fileName: 'a.jpg',
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      repository.uploadPrescriptionImage(
+        patientId: 'patient-1',
+        bytes: Uint8List(SupabaseImageRepository.maxImageBytes + 1),
+        fileName: 'a.jpg',
+      ),
+      throwsArgumentError,
+    );
+    expect(gateway.uploadedPath, isNull);
+  });
+
+  test('deletes a medication pill image through the deletable gateway', () async {
+    final gateway = _RecordingImageStorageGateway();
+    final repository = SupabaseImageRepository(gateway: gateway);
+
+    await repository.deletePillImage(
+      patientId: 'patient-1',
+      medicationId: 'med-1',
+    );
+
+    expect(gateway.deletedBucket, 'pill-images');
+    expect(gateway.deletedPath, 'patient-1/med-1/image');
   });
 }

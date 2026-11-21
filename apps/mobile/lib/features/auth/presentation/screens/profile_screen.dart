@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:medliva/core/theme/app_theme.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
+import 'package:medliva/features/medications/data/offline_adherence_queue.dart';
 import 'package:medliva/l10n/app_localizations.dart';
 import 'package:medliva/main.dart';
+
+final FutureProvider<int> offlinePendingCountProvider =
+    FutureProvider.autoDispose<int>((ref) async {
+      final store = ref.watch(offlineQueueStoreProvider);
+      final items = await store.readItems();
+      return items.length;
+    });
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,6 +27,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String _selectedRole = 'patient';
   bool _initialized = false;
   bool _isSaving = false;
+  bool _isSyncing = false;
 
   @override
   void dispose() {
@@ -26,7 +36,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _save({String? overrideLanguage, String? overrideRole}) async {
+    final prevLanguage = _selectedLanguage;
+    final prevRole = _selectedRole;
     final language = overrideLanguage ?? _selectedLanguage;
+    final roleChanged = overrideRole != null && overrideRole != prevRole;
+
     setState(() {
       _isSaving = true;
       _selectedLanguage = language;
@@ -36,7 +50,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     });
 
     try {
-      await ref.read(authNotifierProvider.notifier).updateProfile(
+      final updated = await ref
+          .read(authNotifierProvider.notifier)
+          .updateProfile(
             name: _nameController.text.trim().isEmpty
                 ? null
                 : _nameController.text.trim(),
@@ -48,8 +64,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.profileSaved)),
       );
+      if (roleChanged) {
+        ref.read(selectedPatientIdProvider.notifier).clear();
+        if (GoRouter.maybeOf(context) != null) {
+          context.go(updated.isCaregiver ? '/caregiver' : '/patient');
+        }
+      }
     } catch (e) {
       if (!mounted) return;
+      setState(() {
+        _selectedLanguage = prevLanguage;
+        _selectedRole = prevRole;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString()),
@@ -63,6 +89,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  Future<void> _syncOfflineQueue() async {
+    if (_isSyncing) return;
+    setState(() => _isSyncing = true);
+    try {
+      await ref.read(offlineAdherenceQueueProvider).flushQueue();
+      ref.invalidate(offlinePendingCountProvider);
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.offlineSyncSuccess)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSyncing = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -70,6 +114,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final authState = ref.watch(authNotifierProvider);
     final user = authState.value;
     final fontScale = ref.watch(fontScaleProvider);
+    final currentThemeMode = ref.watch(themeModeProvider);
+    final reminderSoundEnabled = ref.watch(reminderSoundProvider);
+    final pendingSyncCount =
+        ref.watch(offlinePendingCountProvider).value ?? 0;
 
     if (!_initialized && user != null) {
       _nameController.text = user.name ?? '';
@@ -78,10 +126,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _initialized = true;
     }
 
-    final displayName =
-        (user?.name != null && user!.name!.isNotEmpty)
-            ? user.name!
-            : (user?.email ?? l10n.appName);
+    final displayName = (user?.name != null && user!.name!.trim().isNotEmpty)
+        ? user.name!.trim()
+        : (user?.email ?? l10n.appName);
+
+    final cardBgColor =
+        theme.cardTheme.color ?? theme.colorScheme.surfaceContainerLow;
+    final cardBorderColor = theme.colorScheme.outlineVariant;
+    final unselectedBtnBg =
+        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
 
     return Scaffold(
       appBar: AppBar(
@@ -92,16 +145,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
+                Icon(
                   Icons.favorite_rounded,
-                  color: Color(0xFF00796B),
+                  color: theme.colorScheme.primary,
                   size: 24,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   l10n.appName,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    color: const Color(0xFF00796B),
+                    color: theme.colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -116,13 +169,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // User Header Card
+              // 1. User Header Card
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: cardBorderColor),
                 ),
                 child: Padding(
                   padding: const EdgeInsetsDirectional.all(18),
@@ -133,11 +186,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         children: [
                           CircleAvatar(
                             radius: 32,
-                            backgroundColor: const Color(0xFFE0F2F1),
+                            backgroundColor:
+                                theme.colorScheme.primaryContainer,
                             child: Icon(
                               Icons.person_rounded,
                               size: 38,
-                              color: theme.colorScheme.primary,
+                              color: theme.colorScheme.onPrimaryContainer,
                             ),
                           ),
                           const SizedBox(width: 14),
@@ -147,12 +201,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               children: [
                                 Text(
                                   displayName,
-                                  style: theme.textTheme.titleLarge,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                  ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   l10n.settingsTitle,
-                                  style: theme.textTheme.bodyMedium,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                               ],
                             ),
@@ -162,13 +220,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       const SizedBox(height: 16),
                       Text(
                         l10n.nameLabel,
-                        style: theme.textTheme.titleMedium,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       TextFormField(
                         key: const ValueKey('profile_name_field'),
                         controller: _nameController,
-                        style: theme.textTheme.bodyLarge,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
                         decoration: InputDecoration(
                           hintText: l10n.nameHint,
                           prefixIcon: const Icon(
@@ -183,13 +245,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 14),
 
-              // Language Toggle Card
+              // 2. Theme Mode Switcher Card
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: cardBorderColor),
                 ),
                 child: Padding(
                   padding: const EdgeInsetsDirectional.all(18),
@@ -198,15 +260,137 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(
-                            Icons.language_rounded,
-                            color: Color(0xFF00796B),
+                          Icon(
+                            Icons.palette_rounded,
+                            color: theme.colorScheme.primary,
                             size: 28,
                           ),
                           const SizedBox(width: 10),
-                          Text(
-                            l10n.languageLabel,
-                            style: theme.textTheme.titleLarge,
+                          Expanded(
+                            child: Text(
+                              l10n.appearanceTitle,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          for (final option in [
+                            (
+                              key: 'theme_light_button',
+                              mode: ThemeMode.light,
+                              icon: Icons.light_mode_rounded,
+                              label: l10n.themeLight,
+                            ),
+                            (
+                              key: 'theme_dark_button',
+                              mode: ThemeMode.dark,
+                              icon: Icons.dark_mode_rounded,
+                              label: l10n.themeDark,
+                            ),
+                            (
+                              key: 'theme_system_button',
+                              mode: ThemeMode.system,
+                              icon: Icons.brightness_auto_rounded,
+                              label: l10n.themeSystem,
+                            ),
+                          ])
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsetsDirectional.symmetric(
+                                  horizontal: 4,
+                                ),
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 52,
+                                  ),
+                                  child: OutlinedButton.icon(
+                                    key: ValueKey(option.key),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor:
+                                          currentThemeMode == option.mode
+                                              ? theme.colorScheme.primary
+                                              : unselectedBtnBg,
+                                      foregroundColor:
+                                          currentThemeMode == option.mode
+                                              ? theme.colorScheme.onPrimary
+                                              : theme.colorScheme.onSurface,
+                                      side: BorderSide(
+                                        color: currentThemeMode == option.mode
+                                            ? theme.colorScheme.primary
+                                            : cardBorderColor,
+                                      ),
+                                      padding:
+                                          const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 6,
+                                        vertical: 10,
+                                      ),
+                                    ),
+                                    onPressed: () => ref
+                                        .read(themeModeProvider.notifier)
+                                        .setThemeMode(option.mode),
+                                    icon: Icon(
+                                      option.icon,
+                                      size: 20,
+                                      color: currentThemeMode == option.mode
+                                          ? theme.colorScheme.onPrimary
+                                          : theme.colorScheme.onSurface,
+                                    ),
+                                    label: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        option.label,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 3. Language Toggle Card
+              Card(
+                elevation: 0,
+                color: cardBgColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(color: cardBorderColor),
+                ),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.language_rounded,
+                            color: theme.colorScheme.primary,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              l10n.languageLabel,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -214,17 +398,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: SizedBox(
-                              height: 54,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 54),
                               child: OutlinedButton.icon(
                                 key: const ValueKey('lang_ar_button'),
                                 style: OutlinedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                    horizontal: 10,
+                                    vertical: 12,
+                                  ),
                                   backgroundColor: _selectedLanguage == 'ar'
-                                      ? const Color(0xFF00796B)
-                                      : Colors.grey.shade100,
+                                      ? theme.colorScheme.primary
+                                      : unselectedBtnBg,
                                   foregroundColor: _selectedLanguage == 'ar'
-                                      ? Colors.white
-                                      : Colors.black87,
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
+                                  side: BorderSide(
+                                    color: _selectedLanguage == 'ar'
+                                        ? theme.colorScheme.primary
+                                        : cardBorderColor,
+                                  ),
                                 ),
                                 onPressed: _isSaving
                                     ? null
@@ -233,12 +427,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   _selectedLanguage == 'ar'
                                       ? Icons.check_circle_rounded
                                       : Icons.language_rounded,
+                                  color: _selectedLanguage == 'ar'
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
                                 ),
-                                label: Text(
-                                  l10n.languageArabic,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                label: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    l10n.languageArabic,
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -246,17 +447,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: SizedBox(
-                              height: 54,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 54),
                               child: OutlinedButton.icon(
                                 key: const ValueKey('lang_en_button'),
                                 style: OutlinedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                    horizontal: 10,
+                                    vertical: 12,
+                                  ),
                                   backgroundColor: _selectedLanguage == 'en'
-                                      ? const Color(0xFF00796B)
-                                      : Colors.grey.shade100,
+                                      ? theme.colorScheme.primary
+                                      : unselectedBtnBg,
                                   foregroundColor: _selectedLanguage == 'en'
-                                      ? Colors.white
-                                      : Colors.black87,
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
+                                  side: BorderSide(
+                                    color: _selectedLanguage == 'en'
+                                        ? theme.colorScheme.primary
+                                        : cardBorderColor,
+                                  ),
                                 ),
                                 onPressed: _isSaving
                                     ? null
@@ -265,12 +476,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                   _selectedLanguage == 'en'
                                       ? Icons.check_circle_rounded
                                       : Icons.language_rounded,
+                                  color: _selectedLanguage == 'en'
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
                                 ),
-                                label: Text(
-                                  l10n.languageEnglish,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                label: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    l10n.languageEnglish,
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -284,13 +502,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 14),
 
-              // Font Size Scaling Card (عادي / كبير / كبير جداً)
+              // 4. Font Size Scaling Card
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: cardBorderColor),
                 ),
                 child: Padding(
                   padding: const EdgeInsetsDirectional.all(18),
@@ -299,15 +517,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.text_fields_rounded,
-                            color: Color(0xFF00796B),
+                            color: theme.colorScheme.primary,
                             size: 28,
                           ),
                           const SizedBox(width: 10),
-                          Text(
-                            l10n.fontSizeLabel,
-                            style: theme.textTheme.titleLarge,
+                          Expanded(
+                            child: Text(
+                              l10n.fontSizeLabel,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -333,33 +555,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           ])
                             Expanded(
                               child: Padding(
-                                padding:
-                                    const EdgeInsetsDirectional.symmetric(
+                                padding: const EdgeInsetsDirectional.symmetric(
                                   horizontal: 4,
                                 ),
-                                child: SizedBox(
-                                  height: 50,
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 52,
+                                  ),
                                   child: OutlinedButton(
                                     key: ValueKey(option.key),
                                     style: OutlinedButton.styleFrom(
+                                      padding:
+                                          const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 8,
+                                        vertical: 10,
+                                      ),
                                       backgroundColor:
                                           (fontScale - option.scale).abs() <
                                                   0.05
-                                              ? const Color(0xFF00796B)
-                                              : Colors.grey.shade100,
+                                              ? theme.colorScheme.primary
+                                              : unselectedBtnBg,
                                       foregroundColor:
                                           (fontScale - option.scale).abs() <
                                                   0.05
-                                              ? Colors.white
-                                              : Colors.black87,
+                                              ? theme.colorScheme.onPrimary
+                                              : theme.colorScheme.onSurface,
+                                      side: BorderSide(
+                                        color: (fontScale - option.scale)
+                                                    .abs() <
+                                                0.05
+                                            ? theme.colorScheme.primary
+                                            : cardBorderColor,
+                                      ),
                                     ),
                                     onPressed: () => ref
                                         .read(fontScaleProvider.notifier)
                                         .updateScale(option.scale),
-                                    child: Text(
-                                      option.label,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        option.label,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -374,13 +613,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 14),
 
-              // Account Role Switcher Card (Patient / Caregiver)
+              // 5. Account Role Switcher Card (Patient / Caregiver)
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: cardBorderColor),
                 ),
                 child: Padding(
                   padding: const EdgeInsetsDirectional.all(18),
@@ -389,15 +628,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.switch_account_rounded,
-                            color: Color(0xFF00796B),
+                            color: theme.colorScheme.primary,
                             size: 28,
                           ),
                           const SizedBox(width: 10),
-                          Text(
-                            l10n.roleLabel,
-                            style: theme.textTheme.titleLarge,
+                          Expanded(
+                            child: Text(
+                              l10n.roleLabel,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -405,48 +648,87 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: SizedBox(
-                              height: 52,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 54),
                               child: OutlinedButton.icon(
                                 key: const ValueKey('role_patient_button'),
                                 style: OutlinedButton.styleFrom(
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                    horizontal: 10,
+                                    vertical: 12,
+                                  ),
                                   backgroundColor: _selectedRole == 'patient'
-                                      ? const Color(0xFF00796B)
-                                      : Colors.grey.shade100,
+                                      ? theme.colorScheme.primary
+                                      : unselectedBtnBg,
                                   foregroundColor: _selectedRole == 'patient'
-                                      ? Colors.white
-                                      : Colors.black87,
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
+                                  side: BorderSide(
+                                    color: _selectedRole == 'patient'
+                                        ? theme.colorScheme.primary
+                                        : cardBorderColor,
+                                  ),
                                 ),
                                 onPressed: _isSaving
                                     ? null
                                     : () => _save(overrideRole: 'patient'),
-                                icon: const Icon(Icons.elderly_rounded),
-                                label: Text(l10n.rolePatient),
+                                icon: Icon(
+                                  Icons.elderly_rounded,
+                                  color: _selectedRole == 'patient'
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
+                                ),
+                                label: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    l10n.rolePatient,
+                                    maxLines: 1,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: SizedBox(
-                              height: 52,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 54),
                               child: OutlinedButton.icon(
                                 key: const ValueKey('role_caregiver_button'),
                                 style: OutlinedButton.styleFrom(
-                                  backgroundColor:
-                                      _selectedRole == 'caregiver'
-                                          ? const Color(0xFF00796B)
-                                          : Colors.grey.shade100,
-                                  foregroundColor:
-                                      _selectedRole == 'caregiver'
-                                          ? Colors.white
-                                          : Colors.black87,
+                                  padding:
+                                      const EdgeInsetsDirectional.symmetric(
+                                    horizontal: 10,
+                                    vertical: 12,
+                                  ),
+                                  backgroundColor: _selectedRole == 'caregiver'
+                                      ? theme.colorScheme.primary
+                                      : unselectedBtnBg,
+                                  foregroundColor: _selectedRole == 'caregiver'
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
+                                  side: BorderSide(
+                                    color: _selectedRole == 'caregiver'
+                                        ? theme.colorScheme.primary
+                                        : cardBorderColor,
+                                  ),
                                 ),
                                 onPressed: _isSaving
                                     ? null
                                     : () => _save(overrideRole: 'caregiver'),
-                                icon:
-                                    const Icon(Icons.family_restroom_rounded),
-                                label: Text(l10n.roleCaregiver),
+                                icon: Icon(
+                                  Icons.family_restroom_rounded,
+                                  color: _selectedRole == 'caregiver'
+                                      ? theme.colorScheme.onPrimary
+                                      : theme.colorScheme.onSurface,
+                                ),
+                                label: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    l10n.roleCaregiver,
+                                    maxLines: 1,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -458,13 +740,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 14),
 
-              // Caregivers Navigation Card
+              // 6. Caregivers Navigation Card
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: cardBorderColor),
                 ),
                 child: ListTile(
                   key: const ValueKey('settings_caregivers_tile'),
@@ -472,21 +754,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     horizontal: 18,
                     vertical: 8,
                   ),
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFE0F2F1),
+                  leading: CircleAvatar(
+                    backgroundColor: theme.colorScheme.primaryContainer,
                     child: Icon(
                       Icons.people_alt_rounded,
-                      color: Color(0xFF00796B),
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
                   title: Text(
                     l10n.caregiversSettingsTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
-                  subtitle: Text(l10n.caregiversSettingsSub),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  subtitle: Text(
+                    l10n.caregiversSettingsSub,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  trailing: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 18,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                   onTap: () => context.push(
                     _selectedRole == 'caregiver'
                         ? '/caregiver/pair'
@@ -496,77 +788,120 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Notification Sound Card
+              // 7. Notification Sound Toggle Card (persisted)
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: cardBorderColor),
                 ),
-                child: ListTile(
+                child: SwitchListTile(
+                  key: const ValueKey('notification_sound_switch'),
                   contentPadding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 18,
                     vertical: 8,
                   ),
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFE0F2F1),
+                  secondary: CircleAvatar(
+                    backgroundColor: theme.colorScheme.primaryContainer,
                     child: Icon(
-                      Icons.notifications_active_rounded,
-                      color: Color(0xFF00796B),
+                      reminderSoundEnabled
+                          ? Icons.notifications_active_rounded
+                          : Icons.notifications_off_rounded,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
                   title: Text(
                     l10n.notificationSoundTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
-                  subtitle: Text(l10n.notificationSoundSub),
-                  trailing: const Icon(Icons.chevron_right_rounded),
+                  subtitle: Text(
+                    reminderSoundEnabled
+                        ? l10n.reminderSoundEnabled
+                        : l10n.reminderSoundMuted,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  value: reminderSoundEnabled,
+                  onChanged: (value) => ref
+                      .read(reminderSoundProvider.notifier)
+                      .setEnabled(enabled: value),
                 ),
               ),
               const SizedBox(height: 12),
 
-              // Offline Sync Status Card
+              // 8. Offline Sync Status Card (live queue status & sync action)
               Card(
                 elevation: 0,
-                color: Colors.white,
+                color: cardBgColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: cardBorderColor),
                 ),
                 child: ListTile(
+                  key: const ValueKey('offline_sync_tile'),
                   contentPadding: const EdgeInsetsDirectional.symmetric(
                     horizontal: 18,
                     vertical: 8,
                   ),
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFE0F2F1),
+                  leading: CircleAvatar(
+                    backgroundColor: theme.colorScheme.primaryContainer,
                     child: Icon(
-                      Icons.cloud_done_rounded,
-                      color: Color(0xFF00796B),
+                      pendingSyncCount > 0
+                          ? Icons.cloud_upload_rounded
+                          : Icons.cloud_done_rounded,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
                   title: Text(
                     l10n.offlineSyncTitle,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
-                  subtitle: Text(l10n.offlineSyncSub),
-                  trailing: const Icon(
-                    Icons.check_circle_rounded,
-                    color: Colors.green,
-                    size: 30,
+                  subtitle: Text(
+                    pendingSyncCount > 0
+                        ? l10n.offlineSyncPending(pendingSyncCount)
+                        : l10n.offlineSyncSub,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: pendingSyncCount > 0
+                          ? context.warningColor
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight: pendingSyncCount > 0
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
                   ),
+                  trailing: _isSyncing
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : pendingSyncCount > 0
+                          ? TextButton(
+                              key: const ValueKey('offline_sync_now_button'),
+                              onPressed: _syncOfflineQueue,
+                              child: Text(l10n.offlineSyncNow),
+                            )
+                          : Icon(
+                              Icons.check_circle_rounded,
+                              color: context.successColor,
+                              size: 30,
+                            ),
+                  onTap: pendingSyncCount > 0 ? _syncOfflineQueue : null,
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Save Button
-              SizedBox(
-                height: 56,
+              // 9. Save Button
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 56),
                 child: ElevatedButton.icon(
                   key: const ValueKey('profile_save_button'),
                   onPressed: _isSaving ? null : _save,

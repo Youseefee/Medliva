@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:medliva/core/storage/preferences_storage.dart';
 import 'package:medliva/core/storage/token_storage.dart';
 import 'package:medliva/features/auth/data/auth_repository.dart';
 import 'package:medliva/features/auth/domain/models/user.dart';
 import 'package:medliva/features/auth/presentation/auth_notifier.dart';
+import 'package:medliva/features/auth/presentation/screens/profile_screen.dart';
 import 'package:medliva/features/medications/data/medication_repository.dart';
+import 'package:medliva/features/medications/data/offline_adherence_queue.dart';
+import 'package:medliva/l10n/app_localizations.dart';
 import 'package:medliva/main.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -94,5 +98,81 @@ void main() {
         language: 'en',
       ),
     ).called(1);
+  });
+
+  testWidgets(
+      'ProfileScreen toggles reminder sound and syncs pending offline queue',
+      (tester) async {
+    final prefs = InMemoryPreferencesStorage();
+    final queueStore = InMemoryOfflineQueueStore();
+    await queueStore.writeItems([
+      {
+        'client_uuid': 'uuid-1',
+        'entity': 'intake_log',
+        'op': 'create',
+        'payload': {'schedule_id': 's1', 'status': 'taken'},
+      },
+    ]);
+
+    when(() => tokenStorage.getAccessToken())
+        .thenAnswer((_) async => 'valid_token');
+    when(() => authRepository.getMe()).thenAnswer(
+      (_) async => const UserModel(
+        id: 'patient-1',
+        role: 'patient',
+        name: 'عم أحمد',
+        language: 'ar',
+      ),
+    );
+    when(() => medicationRepository.syncBatch(any()))
+        .thenAnswer((_) async => ['uuid-1']);
+
+    final container = ProviderContainer(
+      overrides: [
+        tokenStorageProvider.overrideWithValue(tokenStorage),
+        authRepositoryProvider.overrideWithValue(authRepository),
+        medicationRepositoryProvider.overrideWithValue(medicationRepository),
+        preferencesStorageProvider.overrideWithValue(prefs),
+        offlineQueueStoreProvider.overrideWithValue(queueStore),
+        offlineAdherenceQueueProvider.overrideWithValue(
+          OfflineAdherenceQueue(
+            repository: medicationRepository,
+            store: queueStore,
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ProfileScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Toggle notification sound off
+    final soundSwitch = find.byKey(const ValueKey('notification_sound_switch'));
+    await tester.ensureVisible(soundSwitch);
+    await tester.tap(soundSwitch);
+    await tester.pumpAndSettle();
+    expect(container.read(reminderSoundProvider), isFalse);
+    expect(prefs.reminderSoundEnabled, isFalse);
+
+    // Offline sync shows pending count and syncs on tap
+    final syncBtn = find.byKey(const ValueKey('offline_sync_now_button'));
+    await tester.ensureVisible(syncBtn);
+    expect(syncBtn, findsOneWidget);
+    await tester.tap(syncBtn);
+    await tester.pumpAndSettle();
+
+    verify(() => medicationRepository.syncBatch(any())).called(1);
+    expect(await queueStore.readItems(), isEmpty);
   });
 }

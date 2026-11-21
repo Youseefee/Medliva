@@ -14,12 +14,12 @@ class ExtractedDrugModel {
     final rawTimes = json['times'] as List<dynamic>? ?? const [];
     final rawDosage = json['dosage_mg'];
     return ExtractedDrugModel(
-      drugTradeName: json['drug_trade_name'] as String,
+      drugTradeName: json['drug_trade_name'] as String? ?? '',
       dosageMg: rawDosage?.toString(),
-      frequencyPerDay: json['frequency_per_day'] as int? ?? 1,
+      frequencyPerDay: (json['frequency_per_day'] as num?)?.toInt() ?? 1,
       mealRelation: json['meal_relation'] as String? ?? 'after_meal',
       times: rawTimes.map((e) => e.toString()).toList(),
-      inventoryPills: json['inventory_pills'] as int? ?? 30,
+      inventoryPills: (json['inventory_pills'] as num?)?.toInt() ?? 30,
       confidenceScore: (json['confidence_score'] as num?)?.toDouble() ?? 0.95,
       activeIngredient: json['active_ingredient'] as String?,
     );
@@ -33,6 +33,28 @@ class ExtractedDrugModel {
   final int inventoryPills;
   final double confidenceScore;
   final String? activeIngredient;
+
+  ExtractedDrugModel copyWith({
+    String? drugTradeName,
+    String? dosageMg,
+    int? frequencyPerDay,
+    String? mealRelation,
+    List<String>? times,
+    int? inventoryPills,
+    double? confidenceScore,
+    String? activeIngredient,
+  }) {
+    return ExtractedDrugModel(
+      drugTradeName: drugTradeName ?? this.drugTradeName,
+      dosageMg: dosageMg ?? this.dosageMg,
+      frequencyPerDay: frequencyPerDay ?? this.frequencyPerDay,
+      mealRelation: mealRelation ?? this.mealRelation,
+      times: times ?? this.times,
+      inventoryPills: inventoryPills ?? this.inventoryPills,
+      confidenceScore: confidenceScore ?? this.confidenceScore,
+      activeIngredient: activeIngredient ?? this.activeIngredient,
+    );
+  }
 }
 
 class PrescriptionScanResult {

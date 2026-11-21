@@ -110,4 +110,58 @@ void main() {
 
     expect(find.text('تم إرسال نداء الاستغاثة بنجاح'), findsOneWidget);
   });
+
+  testWidgets('hold circle does not trigger at 600ms and triggers after full 3s hold',
+      (tester) async {
+    useTallSurface(tester);
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('sos_hold_circle_btn'))),
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+    verifyNever(
+      () => repository.triggerSos(
+        lat: any(named: 'lat'),
+        lng: any(named: 'lng'),
+        note: any(named: 'note'),
+      ),
+    );
+
+    // Complete remaining hold to pass 3 seconds total
+    await tester.pump(const Duration(milliseconds: 2600));
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    verify(
+      () => repository.triggerSos(lat: 30.0444, lng: 31.2357, note: null),
+    ).called(1);
+  });
+
+  testWidgets('contact phone icon opens confirmation dialog instead of firing SOS silently',
+      (tester) async {
+    useTallSurface(tester);
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('sos_contact_call_btn_c-1')));
+    await tester.pumpAndSettle();
+
+    verifyNever(
+      () => repository.triggerSos(
+        lat: any(named: 'lat'),
+        lng: any(named: 'lng'),
+        note: any(named: 'note'),
+      ),
+    );
+    expect(
+      find.byKey(const ValueKey('sos_copy_phone_btn_c-1')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('sos_contact_confirm_send_btn_c-1')),
+      findsOneWidget,
+    );
+  });
 }

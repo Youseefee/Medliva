@@ -84,6 +84,14 @@ class LinkedPatientModel {
   final int todayMissedCount;
   final int activeAlertsCount;
   final List<MissedDoseAlertModel> missedDoses;
+
+  String get displayName {
+    final trimmedName = name?.trim();
+    if (trimmedName != null && trimmedName.isNotEmpty) return trimmedName;
+    final trimmedPhone = phone?.trim();
+    if (trimmedPhone != null && trimmedPhone.isNotEmpty) return trimmedPhone;
+    return patientId;
+  }
 }
 
 class LinkedCaregiverModel {

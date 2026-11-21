@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:medliva/core/storage/token_storage.dart';
 import 'package:medliva/features/auth/data/auth_repository.dart';
@@ -20,8 +22,30 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 class AuthNotifier extends AsyncNotifier<UserModel?> {
+  StreamSubscription<AuthState>? _authSubscription;
+
+  void _listenToAuthChanges() {
+    if (_authSubscription != null) return;
+    try {
+      final client = ref.read(supabaseClientProvider);
+      _authSubscription = client.auth.onAuthStateChange.listen((authState) {
+        if (authState.event == AuthChangeEvent.signedOut) {
+          ref.read(selectedPatientIdProvider.notifier).clear();
+          state = const AsyncValue.data(null);
+        }
+      });
+      ref.onDispose(() {
+        unawaited(_authSubscription?.cancel());
+        _authSubscription = null;
+      });
+    } catch (_) {
+      // Safe fallback for unit/widget tests where Supabase is not initialized.
+    }
+  }
+
   @override
   Future<UserModel?> build() async {
+    _listenToAuthChanges();
     final accessToken = await ref.watch(tokenStorageProvider).getAccessToken();
     if (accessToken == null || accessToken.isEmpty) return null;
     try {
@@ -44,35 +68,23 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
     required String name,
     String role = 'patient',
   }) async {
-    state = const AsyncValue.loading();
-    try {
-      final hasSession = await ref
-          .read(authRepositoryProvider)
-          .signUp(email: email, password: password, name: name, role: role);
-      if (!hasSession) {
-        state = const AsyncValue.data(null);
-        return false;
-      }
-      final user = await ref.read(authRepositoryProvider).getMe();
-      state = AsyncValue.data(user);
-      return true;
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow;
+    final hasSession = await ref
+        .read(authRepositoryProvider)
+        .signUp(email: email, password: password, name: name, role: role);
+    if (!hasSession) {
+      state = const AsyncValue.data(null);
+      return false;
     }
+    final user = await ref.read(authRepositoryProvider).getMe();
+    state = AsyncValue.data(user);
+    return true;
   }
 
   Future<void> signIn({required String email, required String password}) async {
-    state = const AsyncValue.loading();
-    try {
-      final user = await ref
-          .read(authRepositoryProvider)
-          .signIn(email: email, password: password);
-      state = AsyncValue.data(user);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow;
-    }
+    final user = await ref
+        .read(authRepositoryProvider)
+        .signIn(email: email, password: password);
+    state = AsyncValue.data(user);
   }
 
   Future<void> logout() async {

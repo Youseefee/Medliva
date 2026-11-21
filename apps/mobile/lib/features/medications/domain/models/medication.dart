@@ -1,3 +1,19 @@
+/// Canonical days_mask bitmask shared with Supabase RPCs:
+/// Sat=1 (bit 0), Sun=2 (bit 1), Mon=4 (bit 2), Tue=8 (bit 3),
+/// Wed=16 (bit 4), Thu=32 (bit 5), Fri=64 (bit 6).
+int medicationDayBitForDate(DateTime localDate) =>
+    1 << ((localDate.weekday + 1) % 7);
+
+/// Counts how many days per week (0..7) are enabled in [daysMask].
+int countDaysInMask(int daysMask) {
+  final masked = daysMask & 0x7F;
+  var count = 0;
+  for (var bit = 0; bit < 7; bit++) {
+    if ((masked & (1 << bit)) != 0) count++;
+  }
+  return count;
+}
+
 class ScheduleModel {
   const ScheduleModel({
     required this.id,
@@ -7,6 +23,8 @@ class ScheduleModel {
     this.mealRelation = 'after_meal',
     this.daysMask = 127,
     this.instructionsAr,
+    this.startDate,
+    this.endDate,
     this.isActive = true,
   });
 
@@ -21,6 +39,8 @@ class ScheduleModel {
       mealRelation: json['meal_relation'] as String? ?? 'after_meal',
       daysMask: (json['days_mask'] as num?)?.toInt() ?? 127,
       instructionsAr: json['instructions_ar'] as String?,
+      startDate: json['start_date']?.toString(),
+      endDate: json['end_date']?.toString(),
       isActive: json['is_active'] as bool? ?? true,
     );
   }
@@ -32,7 +52,36 @@ class ScheduleModel {
   final String mealRelation;
   final int daysMask;
   final String? instructionsAr;
+  final String? startDate;
+  final String? endDate;
   final bool isActive;
+
+  bool isScheduledOn(DateTime localDate) {
+    if (!isActive) return false;
+    final dayBit = medicationDayBitForDate(localDate);
+    if ((daysMask & dayBit) == 0) return false;
+
+    final dateOnly = DateTime(localDate.year, localDate.month, localDate.day);
+    if (startDate != null && startDate!.isNotEmpty) {
+      final parsedStart = DateTime.tryParse(startDate!);
+      if (parsedStart != null) {
+        final startOnly = DateTime(
+          parsedStart.year,
+          parsedStart.month,
+          parsedStart.day,
+        );
+        if (dateOnly.isBefore(startOnly)) return false;
+      }
+    }
+    if (endDate != null && endDate!.isNotEmpty) {
+      final parsedEnd = DateTime.tryParse(endDate!);
+      if (parsedEnd != null) {
+        final endOnly = DateTime(parsedEnd.year, parsedEnd.month, parsedEnd.day);
+        if (dateOnly.isAfter(endOnly)) return false;
+      }
+    }
+    return true;
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -42,7 +91,36 @@ class ScheduleModel {
     'meal_relation': mealRelation,
     'days_mask': daysMask,
     'instructions_ar': instructionsAr,
+    if (startDate != null) 'start_date': startDate,
+    if (endDate != null) 'end_date': endDate,
     'is_active': isActive,
+  };
+}
+
+class ScheduleUpdateInput {
+  const ScheduleUpdateInput({
+    this.timeOfDay,
+    this.doseAmount,
+    this.mealRelation,
+    this.daysMask,
+    this.instructionsAr,
+    this.isActive,
+  });
+
+  final String? timeOfDay;
+  final double? doseAmount;
+  final String? mealRelation;
+  final int? daysMask;
+  final String? instructionsAr;
+  final bool? isActive;
+
+  Map<String, dynamic> toJson() => {
+    if (timeOfDay != null) 'time_of_day': timeOfDay,
+    if (doseAmount != null) 'dose_amount': doseAmount,
+    if (mealRelation != null) 'meal_relation': mealRelation,
+    if (daysMask != null) 'days_mask': daysMask,
+    if (instructionsAr != null) 'instructions_ar': instructionsAr,
+    if (isActive != null) 'is_active': isActive,
   };
 }
 
@@ -176,23 +254,40 @@ class MedicationCreateInput {
 class MedicationUpdateInput {
   const MedicationUpdateInput({
     this.name,
+    this.tradeName,
+    this.activeIngredient,
+    this.form,
+    this.strength,
     this.stockCount,
     this.alertThresholdDays,
     this.expiryDate,
+    this.clearExpiryDate = false,
     this.isActive,
   });
 
   final String? name;
+  final String? tradeName;
+  final String? activeIngredient;
+  final String? form;
+  final String? strength;
   final int? stockCount;
   final int? alertThresholdDays;
   final String? expiryDate;
+  final bool clearExpiryDate;
   final bool? isActive;
 
   Map<String, dynamic> toJson() => {
     if (name != null) 'name': name,
+    if (tradeName != null) 'trade_name': tradeName,
+    if (activeIngredient != null) 'active_ingredient': activeIngredient,
+    if (form != null) 'form': form,
+    if (strength != null) 'strength': strength,
     if (stockCount != null) 'stock_count': stockCount,
     if (alertThresholdDays != null) 'alert_threshold_days': alertThresholdDays,
-    if (expiryDate != null) 'expiry_date': expiryDate,
+    if (clearExpiryDate)
+      'expiry_date': null
+    else if (expiryDate != null)
+      'expiry_date': expiryDate,
     if (isActive != null) 'is_active': isActive,
   };
 }

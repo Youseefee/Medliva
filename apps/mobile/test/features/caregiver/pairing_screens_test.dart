@@ -42,8 +42,59 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const ValueKey('pairing_code_display')), findsOneWidget);
+    expect(find.byKey(const ValueKey('pairing_code_expiry')), findsOneWidget);
+    expect(find.byKey(const ValueKey('copy_pairing_code_btn')), findsOneWidget);
     expect(find.text('654321'), findsOneWidget);
     verify(() => repository.generatePairingCode()).called(1);
+  });
+
+  testWidgets('CaregiverPairScreen validates short code and normalizes Arabic digits',
+      (tester) async {
+    when(() => repository.pairWithPatient('654321')).thenAnswer(
+      (_) async => const LinkedPatientModel(
+        patientId: 'patient-1',
+        phone: '+201012345678',
+        name: 'عم أحمد',
+        status: 'active',
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          caregiverRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(
+          locale: Locale('ar'),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: CaregiverPairScreen(),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    // Short code shows validation error and does not call repo
+    await tester.enterText(
+      find.byKey(const ValueKey('caregiver_pair_code_field')),
+      '123',
+    );
+    await tester.tap(find.byKey(const ValueKey('caregiver_pair_submit_btn')));
+    await tester.pumpAndSettle();
+    expect(find.text('يرجى إدخال الرمز المكون من 6 أرقام'), findsOneWidget);
+    verifyNever(() => repository.pairWithPatient(any()));
+
+    // Arabic-Indic digits are normalized to ASCII 654321
+    await tester.enterText(
+      find.byKey(const ValueKey('caregiver_pair_code_field')),
+      '٦٥٤٣٢١',
+    );
+    await tester.tap(find.byKey(const ValueKey('caregiver_pair_submit_btn')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('تم ربط حساب المريض بنجاح'), findsOneWidget);
+    verify(() => repository.pairWithPatient('654321')).called(1);
   });
 
   testWidgets('CaregiverPairScreen submits entered pairing code',

@@ -1,3 +1,5 @@
+import 'dart:async' show unawaited;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,6 +22,7 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isSignUp = false;
   bool _isLoading = false;
+  bool _obscurePassword = true;
   String _selectedRole = 'patient';
 
   @override
@@ -30,8 +33,7 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
     super.dispose();
   }
 
-  String _mapAuthError(BuildContext context, Object error) {
-    final isEn = Localizations.localeOf(context).languageCode == 'en';
+  String _mapAuthError(AppLocalizations l10n, Object error) {
     final errorStr = error.toString().toLowerCase();
 
     if (error is AuthException) {
@@ -41,32 +43,24 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
           msg.contains('already registered') ||
           msg.contains('already in use') ||
           msg.contains('user already exists')) {
-        return isEn
-            ? 'Email is already registered. Please sign in instead.'
-            : 'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول بدلاً من ذلك';
+        return l10n.authErrorUserAlreadyExists;
       }
       if (code == 'invalid_credentials' ||
           msg.contains('invalid login credentials') ||
           msg.contains('invalid credentials') ||
           msg.contains('invalid email or password')) {
-        return isEn
-            ? 'Invalid email or password.'
-            : 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
+        return l10n.authErrorInvalidCredentials;
       }
       if (code == 'weak_password' ||
           msg.contains('password should be at least') ||
           msg.contains('weak password')) {
-        return isEn
-            ? 'Password must be at least 6 characters.'
-            : 'كلمة المرور يجب ألا تقل عن 6 أحرف';
+        return l10n.authErrorWeakPassword;
       }
       if (code == 'email_not_confirmed' ||
           msg.contains('email not confirmed')) {
-        return isEn
-            ? 'Please confirm your email before signing in.'
-            : 'يرجى تأكيد بريدك الإلكتروني أولاً عبر الرابط المرسل إليك';
+        return l10n.authErrorEmailNotConfirmed;
       }
-      return error.message;
+      return error.message.isNotEmpty ? error.message : l10n.authErrorGeneric;
     }
 
     if (errorStr.contains('socketexception') ||
@@ -76,12 +70,10 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
         errorStr.contains('failed host lookup') ||
         errorStr.contains('connection error') ||
         errorStr.contains('connecttimeout')) {
-      return isEn
-          ? 'Unable to connect. Please check your internet connection.'
-          : 'تعذر الاتصال، يرجى التحقق من اتصال الإنترنت';
+      return l10n.authErrorNetwork;
     }
 
-    return error.toString();
+    return l10n.authErrorGeneric;
   }
 
   Future<void> _submit() async {
@@ -117,10 +109,13 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
 
       if (!mounted) return;
       final user = ref.read(authNotifierProvider).value;
-      context.go(user?.isCaregiver == true ? '/caregiver' : '/patient');
+      if (GoRouter.maybeOf(context) != null) {
+        context.go(user?.isCaregiver == true ? '/caregiver' : '/patient');
+      }
     } catch (error) {
       if (!mounted) return;
-      final message = _mapAuthError(context, error);
+      final l10n = AppLocalizations.of(context)!;
+      final message = _mapAuthError(l10n, error);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
@@ -136,178 +131,333 @@ class _EmailPasswordScreenState extends ConsumerState<EmailPasswordScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final cardBgColor =
+        theme.cardTheme.color ?? theme.colorScheme.surfaceContainerLow;
+    final cardBorderColor = theme.colorScheme.outlineVariant;
+    final unselectedBtnBg =
+        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35);
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsetsDirectional.symmetric(
-              horizontal: 24,
-              vertical: 32,
+              horizontal: 16,
+              vertical: 12,
             ),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Icon(
-                    Icons.favorite_rounded,
-                    size: 72,
-                    color: Color(0xFF00796B),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: Card(
+                elevation: 0,
+                color: cardBgColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: cardBorderColor),
+                ),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 20,
+                    vertical: 20,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.appName,
-                    style: theme.textTheme.headlineLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.appTagline,
-                    style: theme.textTheme.bodyMedium,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 40),
-                  Text(l10n.loginTitle, style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Text(l10n.loginSubtitle, style: theme.textTheme.bodyMedium),
-                  const SizedBox(height: 24),
-                  if (_isSignUp) ...[
-                    TextFormField(
-                      controller: _nameController,
-                      textCapitalization: TextCapitalization.words,
-                      style: theme.textTheme.bodyLarge,
-                      decoration: InputDecoration(
-                        labelText: l10n.nameLabel,
-                        hintText: l10n.nameHint,
-                        prefixIcon: const Icon(Icons.person_rounded, size: 28),
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? l10n.nameRequiredError
-                          : null,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(l10n.roleLabel, style: theme.textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    Row(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 54,
-                            child: OutlinedButton.icon(
-                              key: const ValueKey('signup_role_patient_btn'),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: _selectedRole == 'patient'
-                                    ? theme.colorScheme.primaryContainer
-                                    : null,
-                              ),
-                              onPressed: () =>
-                                  setState(() => _selectedRole = 'patient'),
-                              icon: Icon(
-                                _selectedRole == 'patient'
-                                    ? Icons.check_circle_rounded
-                                    : Icons.elderly_rounded,
-                              ),
-                              label: Text(l10n.rolePatient),
-                            ),
+                        Icon(
+                          Icons.favorite_rounded,
+                          size: 56,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          l10n.appName,
+                          style: theme.textTheme.headlineLarge?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.appTagline,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _isSignUp ? l10n.signUpTitle : l10n.loginTitle,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 54,
-                            child: OutlinedButton.icon(
-                              key: const ValueKey('signup_role_caregiver_btn'),
-                              style: OutlinedButton.styleFrom(
-                                backgroundColor: _selectedRole == 'caregiver'
-                                    ? theme.colorScheme.primaryContainer
-                                    : null,
+                        const SizedBox(height: 4),
+                        Text(
+                          _isSignUp ? l10n.signUpSubtitle : l10n.loginSubtitle,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_isSignUp) ...[
+                          TextFormField(
+                            controller: _nameController,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
+                              labelText: l10n.nameLabel,
+                              hintText: l10n.nameHint,
+                              prefixIcon: const Icon(
+                                Icons.person_rounded,
+                                size: 28,
                               ),
-                              onPressed: () =>
-                                  setState(() => _selectedRole = 'caregiver'),
+                            ),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty
+                                ? l10n.nameRequiredError
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            l10n.roleLabel,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 54,
+                                  ),
+                                  child: OutlinedButton.icon(
+                                    key: const ValueKey(
+                                      'signup_role_patient_btn',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      padding:
+                                          const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 10,
+                                        vertical: 12,
+                                      ),
+                                      backgroundColor:
+                                          _selectedRole == 'patient'
+                                              ? theme.colorScheme.primary
+                                              : unselectedBtnBg,
+                                      foregroundColor:
+                                          _selectedRole == 'patient'
+                                              ? theme.colorScheme.onPrimary
+                                              : theme.colorScheme.onSurface,
+                                      side: BorderSide(
+                                        color: _selectedRole == 'patient'
+                                            ? theme.colorScheme.primary
+                                            : cardBorderColor,
+                                      ),
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _selectedRole = 'patient',
+                                    ),
+                                    icon: Icon(
+                                      _selectedRole == 'patient'
+                                          ? Icons.check_circle_rounded
+                                          : Icons.elderly_rounded,
+                                      color: _selectedRole == 'patient'
+                                          ? theme.colorScheme.onPrimary
+                                          : theme.colorScheme.onSurface,
+                                    ),
+                                    label: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        l10n.rolePatient,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 54,
+                                  ),
+                                  child: OutlinedButton.icon(
+                                    key: const ValueKey(
+                                      'signup_role_caregiver_btn',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      padding:
+                                          const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 10,
+                                        vertical: 12,
+                                      ),
+                                      backgroundColor:
+                                          _selectedRole == 'caregiver'
+                                              ? theme.colorScheme.primary
+                                              : unselectedBtnBg,
+                                      foregroundColor:
+                                          _selectedRole == 'caregiver'
+                                              ? theme.colorScheme.onPrimary
+                                              : theme.colorScheme.onSurface,
+                                      side: BorderSide(
+                                        color: _selectedRole == 'caregiver'
+                                            ? theme.colorScheme.primary
+                                            : cardBorderColor,
+                                      ),
+                                    ),
+                                    onPressed: () => setState(
+                                      () => _selectedRole = 'caregiver',
+                                    ),
+                                    icon: Icon(
+                                      _selectedRole == 'caregiver'
+                                          ? Icons.check_circle_rounded
+                                          : Icons.family_restroom_rounded,
+                                      color: _selectedRole == 'caregiver'
+                                          ? theme.colorScheme.onPrimary
+                                          : theme.colorScheme.onSurface,
+                                    ),
+                                    label: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        l10n.roleCaregiver,
+                                        maxLines: 1,
+                                        style: const TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          textDirection: TextDirection.ltr,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: l10n.emailLabel,
+                            hintText: l10n.emailHint,
+                            prefixIcon: const Icon(
+                              Icons.email_rounded,
+                              size: 28,
+                            ),
+                          ),
+                          validator: (value) {
+                            final email = value?.trim() ?? '';
+                            if (email.isEmpty) return l10n.emailRequiredError;
+                            if (!email.contains('@') || !email.contains('.')) {
+                              return l10n.emailInvalidError;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) {
+                            if (!_isLoading) unawaited(_submit());
+                          },
+                          autofillHints: _isSignUp
+                              ? const [AutofillHints.newPassword]
+                              : const [AutofillHints.password],
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurface,
+                          ),
+                          decoration: InputDecoration(
+                            labelText: l10n.passwordLabel,
+                            prefixIcon: const Icon(
+                              Icons.lock_rounded,
+                              size: 28,
+                            ),
+                            suffixIcon: IconButton(
+                              tooltip: _obscurePassword
+                                  ? l10n.showPassword
+                                  : l10n.hidePassword,
                               icon: Icon(
-                                _selectedRole == 'caregiver'
-                                    ? Icons.check_circle_rounded
-                                    : Icons.family_restroom_rounded,
+                                _obscurePassword
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                                size: 24,
+                                color: theme.colorScheme.onSurfaceVariant,
                               ),
-                              label: Text(l10n.roleCaregiver),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return l10n.passwordRequiredError;
+                            }
+                            if (value.length < 6) {
+                              return l10n.passwordShortError;
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 28),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 56),
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _submit,
+                            child: _isLoading
+                                ? SizedBox(
+                                    height: 28,
+                                    width: 28,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 3,
+                                      color: theme.colorScheme.onPrimary,
+                                    ),
+                                  )
+                                : Text(
+                                    _isSignUp
+                                        ? l10n.signUpButton
+                                        : l10n.signInButton,
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () => setState(() => _isSignUp = !_isSignUp),
+                          child: Text(
+                            _isSignUp
+                                ? l10n.switchToSignIn
+                                : l10n.switchToSignUp,
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                  ],
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
-                    style: theme.textTheme.bodyLarge,
-                    decoration: InputDecoration(
-                      labelText: l10n.emailLabel,
-                      hintText: l10n.emailHint,
-                      prefixIcon: const Icon(Icons.email_rounded, size: 28),
-                    ),
-                    validator: (value) {
-                      final email = value?.trim() ?? '';
-                      if (email.isEmpty) return l10n.emailRequiredError;
-                      if (!email.contains('@') || !email.contains('.')) {
-                        return l10n.emailInvalidError;
-                      }
-                      return null;
-                    },
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    autofillHints: _isSignUp
-                        ? const [AutofillHints.newPassword]
-                        : const [AutofillHints.password],
-                    style: theme.textTheme.bodyLarge,
-                    decoration: InputDecoration(
-                      labelText: l10n.passwordLabel,
-                      prefixIcon: const Icon(Icons.lock_rounded, size: 28),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return l10n.passwordRequiredError;
-                      }
-                      if (value.length < 6) return l10n.passwordShortError;
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    height: 56,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _submit,
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 28,
-                              width: 28,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 3,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              _isSignUp ? l10n.signUpButton : l10n.signInButton,
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () => setState(() => _isSignUp = !_isSignUp),
-                    child: Text(
-                      _isSignUp ? l10n.switchToSignIn : l10n.switchToSignUp,
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

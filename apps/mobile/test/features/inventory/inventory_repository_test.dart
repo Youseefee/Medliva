@@ -66,7 +66,7 @@ void main() {
     when(
       () => query.select(
         'id, name, stock_count, alert_threshold_days, expiry_date, '
-        'schedules(dose_amount, is_active)',
+        'schedules(dose_amount, days_mask, is_active)',
       ),
     ).thenAnswer(
       (_) => FakePostgrestFilterBuilder(
@@ -78,7 +78,7 @@ void main() {
             'alert_threshold_days': 5,
             'expiry_date': null,
             'schedules': [
-              {'dose_amount': 2, 'is_active': true},
+              {'dose_amount': 2, 'days_mask': 127, 'is_active': true},
             ],
           },
           {
@@ -88,7 +88,18 @@ void main() {
             'alert_threshold_days': 5,
             'expiry_date': '2020-01-01',
             'schedules': [
-              {'dose_amount': 2, 'is_active': true},
+              {'dose_amount': 2, 'days_mask': 127, 'is_active': true},
+            ],
+          },
+          {
+            'id': 'med-weekly',
+            'name': 'Vitamin D',
+            'stock_count': 4,
+            'alert_threshold_days': 5,
+            'expiry_date': null,
+            'schedules': [
+              // Once per week (Saturday bit 0 = 1) -> daily avg = 1/7 -> 28 days
+              {'dose_amount': 1, 'days_mask': 1, 'is_active': true},
             ],
           },
         ],
@@ -96,12 +107,33 @@ void main() {
     );
 
     final forecasts = await repository.getForecast('patient-1');
-    expect(forecasts, hasLength(2));
+    expect(forecasts, hasLength(3));
     expect(forecasts[0].daysRemaining, 10);
     expect(forecasts[0].isLowStock, isFalse);
     expect(forecasts[1].daysRemaining, 3);
     expect(forecasts[1].isLowStock, isTrue);
     expect(forecasts[1].isExpired, isTrue);
+    expect(forecasts[2].daysRemaining, 28);
+    expect(forecasts[2].isLowStock, isFalse);
+  });
+
+  test('builds an English refill message when locale is en', () async {
+    when(() => supabase.from('users')).thenAnswer((_) => query);
+    when(() => query.select('name, address')).thenAnswer(
+      (_) => FakePostgrestFilterBuilder(
+        row: {'name': 'Mahmoud Ali', 'address': 'Maadi, Cairo'},
+      ),
+    );
+
+    final result = await repository.createRefillOrder(
+      patientId: 'patient-1',
+      medicationName: 'Concor 5mg',
+      quantity: 2,
+      locale: 'en',
+    );
+    expect(result.messageText, contains('Mahmoud Ali'));
+    expect(result.messageText, contains('Concor 5mg: 2 pack(s)'));
+    expect(result.messageText, contains('Maadi, Cairo'));
   });
 
   test('builds a refill WhatsApp message from the Supabase profile', () async {

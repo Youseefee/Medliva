@@ -51,6 +51,17 @@ class MedicationReminderPlanner {
   final Duration repeatInterval;
   final int maxRepeats;
 
+  /// Deterministic FNV-1a hash so notification IDs remain identical across
+  /// app restarts (unlike Dart's randomized `String.hashCode`).
+  int _deterministicBaseId(String scheduleId) {
+    var hash = 0x811c9dc5;
+    for (final unit in scheduleId.codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x01000193) & 0x7FFFFFFF;
+    }
+    return (hash % 100000) * 10;
+  }
+
   List<PlannedReminder> buildReminders({
     required List<TodayDoseModel> doses,
     required DateTime referenceDate,
@@ -75,7 +86,7 @@ class MedicationReminderPlanner {
         minute,
       );
 
-      final baseId = ((dose.scheduleId.hashCode & 0x7FFFFFFF) % 100000) * 10;
+      final baseId = _deterministicBaseId(dose.scheduleId);
 
       for (var attempt = 0; attempt <= maxRepeats; attempt++) {
         final scheduledAt = baseTime.add(repeatInterval * attempt);
@@ -95,11 +106,14 @@ class MedicationReminderPlanner {
   }
 
   List<int> notificationIdsForSchedule(String scheduleId) {
-    final baseId = ((scheduleId.hashCode & 0x7FFFFFFF) % 100000) * 10;
+    final baseId = _deterministicBaseId(scheduleId);
     return [
       for (var attempt = 0; attempt <= maxRepeats; attempt++) baseId + attempt,
     ];
   }
+
+  int snoozeNotificationIdForSchedule(String scheduleId) =>
+      _deterministicBaseId(scheduleId) + maxRepeats + 1;
 }
 
 class LocalReminderService {
@@ -167,10 +181,36 @@ class LocalReminderService {
     }
   }
 
+  NotificationDetails _buildNotificationDetails({
+    required ReminderCopy copy,
+    required bool playSound,
+  }) {
+    final androidDetails = AndroidNotificationDetails(
+      playSound ? 'medication_reminders' : 'medication_reminders_silent',
+      copy.channelName,
+      channelDescription: copy.channelDescription,
+      importance: Importance.max,
+      priority: Priority.high,
+      fullScreenIntent: true,
+      playSound: playSound,
+    );
+    final darwinDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: playSound,
+    );
+    return NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+      macOS: darwinDetails,
+    );
+  }
+
   Future<void> rescheduleForToday(
     List<TodayDoseModel> doses, {
     DateTime? now,
     ReminderCopy copy = ReminderCopy.fallback,
+    bool playSound = true,
   }) async {
     if (!_initialized) return;
 
@@ -182,15 +222,10 @@ class LocalReminderService {
 
     await _ignoreFailure(_plugin.cancelAll);
 
-    final androidDetails = AndroidNotificationDetails(
-      'medication_reminders',
-      copy.channelName,
-      channelDescription: copy.channelDescription,
-      importance: Importance.max,
-      priority: Priority.high,
-      fullScreenIntent: true,
+    final details = _buildNotificationDetails(
+      copy: copy,
+      playSound: playSound,
     );
-    final details = NotificationDetails(android: androidDetails);
 
     for (final reminder in reminders) {
       if (!reminder.scheduledAt.isAfter(refNow)) continue;
@@ -207,11 +242,46 @@ class LocalReminderService {
     }
   }
 
+  Future<void> scheduleSnoozeReminder({
+    required TodayDoseModel dose,
+    Duration delay = const Duration(minutes: 15),
+    DateTime? now,
+    ReminderCopy copy = ReminderCopy.fallback,
+    bool playSound = true,
+  }) async {
+    if (!_initialized) return;
+
+    await cancelScheduleReminders(dose.scheduleId);
+
+    final refNow = now ?? DateTime.now();
+    final snoozeAt = refNow.add(delay);
+    final details = _buildNotificationDetails(
+      copy: copy,
+      playSound: playSound,
+    );
+
+    await _ignoreFailure(
+      () => _plugin.zonedSchedule(
+        id: _planner.snoozeNotificationIdForSchedule(dose.scheduleId),
+        title: dose.medicationName,
+        body: copy.body,
+        scheduledDate: tz.TZDateTime.from(snoozeAt, tz.local),
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      ),
+    );
+  }
+
   Future<void> cancelScheduleReminders(String scheduleId) async {
     if (!_initialized) return;
     for (final id in _planner.notificationIdsForSchedule(scheduleId)) {
       await _ignoreFailure(() => _plugin.cancel(id: id));
     }
+    await _ignoreFailure(
+      () => _plugin.cancel(
+        id: _planner.snoozeNotificationIdForSchedule(scheduleId),
+      ),
+    );
   }
 
   /// Runs a platform call and swallows its failures so a broken notification

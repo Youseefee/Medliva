@@ -19,6 +19,7 @@ import 'package:medliva/features/prescription/presentation/screens/prescription_
 import 'package:medliva/features/reports/presentation/screens/doctor_report_screen.dart';
 import 'package:medliva/features/vitals/presentation/screens/vitals_screen.dart';
 import 'package:medliva/features/vitals/presentation/screens/vitals_trends_screen.dart';
+import 'package:medliva/l10n/app_localizations.dart';
 
 final _routerRefreshProvider = Provider<ValueNotifier<int>>((ref) {
   final notifier = ValueNotifier<int>(0);
@@ -43,7 +44,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
 
       if (isLoading) {
-        return location == '/splash' ? null : '/splash';
+        if (location == '/splash' || location == '/login') {
+          return null;
+        }
+        return '/splash';
       }
 
       final isAuthRoute = location == '/login';
@@ -58,6 +62,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (isAuthRoute || location == '/splash' || location == '/home') {
           return targetShell;
         }
+        if (user.isCaregiver && location == '/patient') {
+          return '/caregiver';
+        }
+        if (!user.isCaregiver && location == '/caregiver') {
+          return '/patient';
+        }
       }
 
       return null;
@@ -65,8 +75,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) =>
-            const Scaffold(body: Center(child: CircularProgressIndicator())),
+        builder: (context, state) => const _MedlivaSplashScreen(),
       ),
       GoRoute(
         path: '/login',
@@ -94,6 +103,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/medications/new',
         builder: (context, state) => const MedicationFormScreen(),
+      ),
+      // Must appear BEFORE /medications/:id so "reminder" is not matched as :id.
+      GoRoute(
+        path: '/medications/reminder',
+        builder: (context, state) {
+          final dose = state.extra is TodayDoseModel
+              ? state.extra! as TodayDoseModel
+              : null;
+          return DoseReminderScreen(dose: dose);
+        },
       ),
       GoRoute(
         path: '/medications/:id',
@@ -128,6 +147,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const VitalsScreen(),
       ),
       GoRoute(
+        path: '/vitals/trends',
+        builder: (context, state) => const VitalsTrendsScreen(),
+      ),
+      GoRoute(
         path: '/prescription/scan',
         builder: (context, state) => const PrescriptionScanScreen(),
       ),
@@ -148,17 +171,49 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
-        path: '/medications/reminder',
-        builder: (context, state) => const DoseReminderScreen(),
-      ),
-      GoRoute(
-        path: '/vitals/trends',
-        builder: (context, state) => const VitalsTrendsScreen(),
-      ),
-      GoRoute(
         path: '/emergency/sos',
         builder: (context, state) => const SosEmergencyScreen(),
       ),
     ],
   );
 });
+
+class _MedlivaSplashScreen extends StatelessWidget {
+  const _MedlivaSplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final appName = AppLocalizations.of(context)?.appName ?? 'Medliva';
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 40,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.favorite_rounded,
+                  size: 46,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                appName,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

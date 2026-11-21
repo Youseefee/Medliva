@@ -50,6 +50,7 @@ class CaregiverRepository {
       'CANNOT_PAIR_SELF',
       'ALREADY_LINKED',
       'PAIRING_ALREADY_PENDING',
+      'PAIRING_CODE_GENERATION_FAILED',
       'FORBIDDEN',
     ];
     final upper = message.toUpperCase();
@@ -67,9 +68,26 @@ class CaregiverRepository {
       'CANNOT_PAIR_SELF' => 'لا يمكنك الاقتران بنفسك',
       'ALREADY_LINKED' => 'هذا المريض مرتبط بحسابك بالفعل',
       'PAIRING_ALREADY_PENDING' => 'يوجد طلب ربط سابق قيد الانتظار',
+      'PAIRING_CODE_GENERATION_FAILED' => 'تعذر توليد رمز الاقتران، حاول مجدداً',
       'FORBIDDEN' => 'ليس لديك صلاحية عرض بيانات هذا المريض',
       _ => fallback,
     };
+  }
+
+  /// Normalizes Arabic-Indic (`٠-٩`) and Extended Arabic-Indic (`۰-۹`)
+  /// numerals to ASCII `0-9`.
+  static String normalizeDigits(String input) {
+    final buffer = StringBuffer();
+    for (final rune in input.runes) {
+      if (rune >= 0x0660 && rune <= 0x0669) {
+        buffer.writeCharCode(0x0030 + (rune - 0x0660));
+      } else if (rune >= 0x06F0 && rune <= 0x06F9) {
+        buffer.writeCharCode(0x0030 + (rune - 0x06F0));
+      } else {
+        buffer.writeCharCode(rune);
+      }
+    }
+    return buffer.toString();
   }
 
   Future<PairingCodeModel> generatePairingCode() async {
@@ -82,9 +100,10 @@ class CaregiverRepository {
 
   Future<LinkedPatientModel> pairWithPatient(String code) async {
     await _requireSignedIn();
+    final normalizedCode = normalizeDigits(code).trim();
     final result = await _rpc<Map<String, dynamic>>(
       'consume_caregiver_pairing_code',
-      params: {'p_code': code.trim()},
+      params: {'p_code': normalizedCode},
     );
     return LinkedPatientModel.fromJson(Map<String, dynamic>.from(result));
   }

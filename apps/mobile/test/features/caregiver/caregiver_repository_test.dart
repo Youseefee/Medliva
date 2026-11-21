@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:medliva/features/caregiver/data/caregiver_repository.dart';
+import 'package:medliva/features/caregiver/domain/models/caregiver.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -241,5 +242,48 @@ void main() {
             ),
       ),
     );
+  });
+
+  test('normalizes Arabic-Indic digits before calling consume RPC', () async {
+    when(
+      () => supabase.rpc<Map<String, dynamic>>(
+        'consume_caregiver_pairing_code',
+        params: any(named: 'params'),
+      ),
+    ).thenAnswer(
+      (_) => FakeRpcBuilder<Map<String, dynamic>>({
+        'patient_id': 'patient-2',
+        'name': 'سعيد',
+        'phone': '01099998888',
+        'status': 'active',
+        'linked_at': '2026-10-27T12:00:00Z',
+      }),
+    );
+
+    await repository.pairWithPatient(' ٦٥٤٣٢١ ');
+
+    verify(
+      () => supabase.rpc<Map<String, dynamic>>(
+        'consume_caregiver_pairing_code',
+        params: {'p_code': '654321'},
+      ),
+    ).called(1);
+  });
+
+  test('LinkedPatientModel.displayName falls back when name is blank', () {
+    const emptyName = LinkedPatientModel(
+      patientId: 'p-1',
+      name: '   ',
+      phone: '+201012345678',
+      status: 'active',
+    );
+    const noPhone = LinkedPatientModel(
+      patientId: 'p-2',
+      name: '',
+      phone: '',
+      status: 'active',
+    );
+    expect(emptyName.displayName, '+201012345678');
+    expect(noPhone.displayName, 'p-2');
   });
 }
